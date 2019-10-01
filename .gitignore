@@ -1,0 +1,13 @@
+.httr-oauth*
+/input/
+/ext/
+/output/
+*.xlsx
+.DS_Store
+### R ###
+*.Rproj
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rda
