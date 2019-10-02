@@ -1,6 +1,6 @@
 # Format UTM log
 # Mariko Ohtsuka
-# ver.1.0 2019/8/21 created
+# 2019/10/1 created
 # ------ library ------
 library("stringr")
 library("dplyr")
@@ -112,6 +112,43 @@ AddUserInfo <- function(raw_log, ip_list){
     }
   }
   return(output_file)
+}
+#' @title
+#' OutputWorkbook
+#' @param
+#' wb : Workbook object(openxlsx)
+#' sheetname : Worksheet name
+#' df : Data frame to output
+#' @return
+#' none
+OutputWorkbook <- function(wb, sheetname, df){
+  header_style <- createStyle(fontSize=16)
+  addWorksheet(wb, sheetname)
+  writeData(wb, sheet=sheetname, x=df, withFilter=F, sep=",")
+  pageSetup(wb, sheet=sheetname, orientation="landscape", fitToWidth=T, fitToHeight=F)
+  addStyle(wb, sheet=sheetname, header_style, rows=1, cols=1)
+  switch(i,
+         # Admin and System Events Report
+         "1"={
+           setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 8), widths = c(18, 30, 25, 35, 22, 52))
+         },
+         # Application and Risk Analysis
+         "2"={
+           setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(20, 20, 20, 60, 60, 40))
+         },
+         # Bandwidth and Applications Report
+         "3"={
+           setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
+         },
+         # Client Reputation
+         "4"={
+           setColWidths(wb, i, cols = c(2, 3, 4, 5, 6), widths = c(30, 20, 20, 60, 30))
+         },
+         # User Report
+         "5"={
+           setColWidths(wb, i, cols = c(1, 2, 3, 4, 5), widths = c(90, 20, 20, 80))
+         }
+  )
 }
 # ------ Constant definition ------
 kTargetLog <- c("Admin and System Events Report without guest",
@@ -263,13 +300,11 @@ output_csv_names <- names(output_list) %>% str_extract(pattern="[^\\/]*$")
 output_wb <- createWorkbook()
 for (i in 1:length(output_list)){
   rownames(output_list[[i]]) <- NULL
-  write.table(output_list[[i]], str_c(output_path, "/", output_csv_names[i]), col.names=F, row.names=F, fileEncoding="cp932")
-  addWorksheet(output_wb, i)
-  writeData(output_wb, sheet=i, x=c(output_csv_names[i], output_list[[i]]), withFilter=F, sep=",")
-  pageSetup(output_wb, sheet=i, orientation="landscape", fitToWidth=T, fitToHeight=F)
+  OutputWorkbook(output_wb, i, c(output_csv_names[i], output_list[[i]]))
 }
 write.csv(df_dhcp, str_c(output_path, "/dhcp.csv"))
 write.csv(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="cp932")
 saveWorkbook(output_wb, str_c(output_path, "/", utm_dir_name, ".xlsx"), overwrite=T)
 # Delete all objects
-#rm(list = ls())
+save(output_list, file=str_c(output_path, "/output_list.Rda"))
+rm(list = ls())
