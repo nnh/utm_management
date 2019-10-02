@@ -1,6 +1,6 @@
 # Format UTM log
 # Mariko Ohtsuka
-# 2019/10/1 created
+# 2019/10/2 created
 # ------ library ------
 library("stringr")
 library("dplyr")
@@ -114,6 +114,32 @@ AddUserInfo <- function(raw_log, ip_list){
   return(output_file)
 }
 #' @title
+#' DeleteRows
+#' @param
+#' target : target vector
+#' target_header : Header to delete
+#' @return
+#' vector
+DeleteRows <- function(target, target_header){
+  delete_f <- F
+  for (i in 1:length(target)){
+    if(target[i] %in% target_header){
+      delete_f <- T
+    } else if (str_trim(target[i], side = "both") == ""){
+      if (delete_f){
+        target[i] <- NA
+      }
+      delete_f <- F
+    }
+    if (delete_f){
+      target[i] <- NA
+    }
+  }
+  res <- na.omit(target)
+  attr(res, "na.action") <- NULL
+  return(res)
+}
+#' @title
 #' OutputWorkbook
 #' @param
 #' wb : Workbook object(openxlsx)
@@ -121,16 +147,16 @@ AddUserInfo <- function(raw_log, ip_list){
 #' df : Data frame to output
 #' @return
 #' none
-OutputWorkbook <- function(wb, sheetname, df){
+OutputWorkbook <- function(wb, sheetname, df, title){
   header_style <- createStyle(fontSize=16)
   addWorksheet(wb, sheetname)
-  writeData(wb, sheet=sheetname, x=df, withFilter=F, sep=",")
-  pageSetup(wb, sheet=sheetname, orientation="landscape", fitToWidth=T, fitToHeight=F)
-  addStyle(wb, sheet=sheetname, header_style, rows=1, cols=1)
+  temp_df <- df
   switch(i,
          # Admin and System Events Report
          "1"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 8), widths = c(18, 30, 25, 35, 22, 52))
+           delete_target_header <- c("###Login Summary By Date###", "###Events by Date###")
+           temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # Application and Risk Analysis
          "2"={
@@ -139,16 +165,24 @@ OutputWorkbook <- function(wb, sheetname, df){
          # Bandwidth and Applications Report
          "3"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
+           delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Activeユーザー###")
+           temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # Client Reputation
          "4"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6), widths = c(30, 20, 20, 60, 30))
+           delete_target_header <- c("###全ユーザー/デバイスのスコアサマリー###",
+                                     "###全ユーザー/デバイスのインシデント数###")
+           temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # User Report
          "5"={
            setColWidths(wb, i, cols = c(1, 2, 3, 4, 5), widths = c(90, 20, 20, 80))
          }
   )
+  writeData(wb, sheet=sheetname, x=c(title, temp_df), withFilter=F, sep=",")
+  pageSetup(wb, sheet=sheetname, orientation="landscape", fitToWidth=T, fitToHeight=F)
+  addStyle(wb, sheet=sheetname, header_style, rows=1, cols=1)
 }
 # ------ Constant definition ------
 kTargetLog <- c("Admin and System Events Report without guest",
@@ -300,7 +334,7 @@ output_csv_names <- names(output_list) %>% str_extract(pattern="[^\\/]*$")
 output_wb <- createWorkbook()
 for (i in 1:length(output_list)){
   rownames(output_list[[i]]) <- NULL
-  OutputWorkbook(output_wb, i, c(output_csv_names[i], output_list[[i]]))
+  OutputWorkbook(output_wb, i, output_list[[i]], output_csv_names[i])
 }
 write.csv(df_dhcp, str_c(output_path, "/dhcp.csv"))
 write.csv(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="cp932")
@@ -308,3 +342,4 @@ saveWorkbook(output_wb, str_c(output_path, "/", utm_dir_name, ".xlsx"), overwrit
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
 rm(list = ls())
+
