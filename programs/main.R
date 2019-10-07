@@ -311,20 +311,6 @@ ip_list <- excluded %>%
              mutate(Department="", Hostname="", MAC_Address="", Duplicate=F) %>%
                select(User, Department, Hostname, IP, MAC_Address, Duplicate) %>%
                  bind_rows(private_ip)
-# add wireless survey terminal by anet
-if (nrow(filter(ip_list, Hostname=="nmccrcMBAir001"))==0){
-  temp_row <- nrow(ip_list) + 1
-  temp_ip_list <- data.frame(matrix(rep(NA, ncol(ip_list)), nrow=1))
-  colnames(temp_ip_list) <- colnames(ip_list)
-  temp_ip_list$User <- "エイネット無線調査"
-  temp_ip_list$Department <- ""
-  temp_ip_list$Hostname <- "nmccrcMBAir001"
-  temp_ip_list$IP <- ""
-  temp_ip_list$MAC_Address <- ""
-  temp_ip_list$Duplicate <- F
-  temp_ip_list$Duplicate <- as.character(temp_ip_list$Duplicate)
-  ip_list <- bind_rows(ip_list, temp_ip_list)
-}
 # NA -> ""
 ip_list[is.na(ip_list)] <- ""
 # Add information such as hostname to the log
