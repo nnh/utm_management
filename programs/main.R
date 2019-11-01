@@ -158,25 +158,23 @@ OutputWorkbook <- function(wb, sheetname, df, title){
            delete_target_header <- c("###Login Summary By Date###", "###Events by Date###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
-         # Application and Risk Analysis
-         "2"={
-           setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(20, 20, 20, 60, 60, 40))
-         },
          # Bandwidth and Applications Report
-         "3"={
+         "2"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
            delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Activeユーザー###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # Client Reputation
-         "4"={
+         "3"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6), widths = c(30, 20, 20, 60, 30))
            delete_target_header <- c("###全ユーザー/デバイスのスコアサマリー###",
-                                     "###全ユーザー/デバイスのインシデント数###")
+                                     "###全ユーザー/デバイスのインシデント数###",
+                                     "###レピュテーションスコアの大きい上位デバイス###",
+                                     "###直近2期間にスコアが増加した上位デバイス###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # User Report
-         "5"={
+         "4"={
            setColWidths(wb, i, cols = c(1, 2, 3, 4, 5), widths = c(90, 20, 20, 80))
          }
   )
@@ -186,7 +184,6 @@ OutputWorkbook <- function(wb, sheetname, df, title){
 }
 # ------ Constant definition ------
 kTargetLog <- c("Admin and System Events Report without guest",
-                "Application and Risk Analysis without guest",
                 "Bandwidth and Applications Report without guest",
                 "Client Reputation without guest",
                 "User Report without guest")
@@ -224,6 +221,7 @@ address_list <- read.csv(str_c(ext_path, "/sinet.txt"), header=T, as.is=T)
 # Get PC information
 gs_auth(new_user=T, cache=F)
 sinet_table <- filter(address_list, ID == "sinet")$Item %>% gs_url %>% gs_read(ws=1)
+static_ip_table <- filter(address_list, ID == "static_ip")$Item %>% gs_url %>% gs_read(ws=1)
 # Get DHCP list
 input_dhcp_login <- filter(address_list, ID == "dhcp")$Item
 InputStr("ssh_user", "UTMのユーザー名を入力してください：")
@@ -253,12 +251,15 @@ duplicate_hostname <- sinet_table %>%
                               unique %>%
                                 unlist
 sinet_table$Duplicate <- ifelse(sinet_table$Hostname %in% duplicate_hostname, T, F)
-dynamic_ip <- right_join(sinet_table, df_dhcp, by="Hostname") %>%
-                select(User="使用者名", Department="部署名", "Hostname", "IP", MAC_Address="MAC-Address", "Duplicate")
+sinet_table$lower_hostname <- tolower(sinet_table$Hostname)
+df_dhcp$lower_hostname <- iconv(df_dhcp$Hostname, "utf-8", "cp932") %>% tolower()
+dynamic_ip <- right_join(sinet_table, df_dhcp, by="lower_hostname") %>%
+                select(User="使用者名", Department="部署名", Hostname="Hostname.x", "IP", MAC_Address="MAC-Address", "Duplicate")
 # Get Static IP list
-private_ip <- read.csv(str_c(ext_path, "/static_ip.csv"), as.is=T, na.strings="") %>%
-                mutate(Department="", Duplicate=F) %>%
-                  select(User="所有者", "Department", "Hostname", "IP", MAC_Address="MAC.Address", "Duplicate") %>%
+private_ip <- filter(static_ip_table, !is.na(ホスト名)) %>%
+                mutate(MAC_Address="", Duplicate=F) %>%
+                  select(User="用途", Department="設置場所", Hostname="ホスト名", IP="IPアドレス", "MAC_Address",
+                         "Duplicate") %>%
                     bind_rows(dynamic_ip)
 # Get Whitelist and Blacklist
 raw_excluded <- read.csv(str_c(ext_path, "/excluded.csv"), as.is=T, na.strings="")
