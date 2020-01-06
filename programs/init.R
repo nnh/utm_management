@@ -1,5 +1,6 @@
 install.packages("tidyverse")
-install.packages("googlesheets")
+install.packages("googledrive")
+install.packages("googlesheets4")
 install.packages("ssh")
 install.packages("here")
 install.packages("openxlsx")

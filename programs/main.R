@@ -6,10 +6,19 @@ library("stringr")
 library("dplyr")
 library("tidyr")
 library("readr")
-library("googlesheets")
+library("googledrive")
+library("googlesheets4")
 library("ssh")
 library("here")
 library("openxlsx")
+# google authentication
+sheets_auth(
+  email = gargle::gargle_oauth_email(),
+  path = NULL,
+  scopes = "https://www.googleapis.com/auth/spreadsheets.readonly",
+  cache = gargle::gargle_oauth_cache(),
+  use_oob = gargle::gargle_oob_default(),
+  token = NULL)
 # ------ function ------
 #' @title
 #' InputStr
@@ -218,30 +227,18 @@ if (anyNA(target_file_list)) {
 raw_log_list <- sapply(str_c(input_path, "/", target_file_list), ReadLog)
 # Get URL list
 address_list <- read.csv(str_c(ext_path, "/sinet.txt"), header=T, as.is=T)
-# **** google login error tidyverseパッケージの対応待ち start ****
-# **** # Get PC information
-# **** gs_auth(new_user=T, cache=F)
-# **** sinet_table <- filter(address_list, ID == "sinet")$Item %>% gs_url %>% gs_read(ws=1)
-# **** static_ip_table <- filter(address_list, ID == "static_ip")$Item %>% gs_url %>% gs_read(ws=1)
-# **** # Get DHCP list
-# **** input_dhcp_login <- filter(address_list, ID == "dhcp")$Item
-# **** InputStr("ssh_user", "UTMのユーザー名を入力してください：")
-# **** dhcp_login <- str_c(ssh_user, input_dhcp_login)
-# **** InputStr("ssh_password", "UTMのパスワードを入力してください：")
-# **** session <- ssh_connect(dhcp_login, passwd=ssh_password)
-# **** rm(ssh_password)
-# **** dhcp_raw <- ssh_exec_internal(session, command = "execute dhcp lease-list")
-# **** ssh_disconnect(session)
 # Get PC information
-sinet_table <- read.csv(str_c(ext_path, "/SINET5接続許可依頼書（回答） - フォームの回答 1.csv"), header=T, as.is=T)
-static_ip_table <- read.csv(str_c(ext_path, "/IP address list - Static IP.csv"), header=T, as.is=T)
+sinet_table <- filter(address_list, ID == "sinet")$Item %>% read_sheet()
+static_ip_table <- filter(address_list, ID == "static_ip")$Item %>% read_sheet()
 # Get DHCP list
 input_dhcp_login <- filter(address_list, ID == "dhcp")$Item
-dhcp_login <- str_c("Mariko.Ohtsuka", input_dhcp_login)
-session <- ssh_connect(dhcp_login, passwd="")
+InputStr("ssh_user", "UTMのユーザー名を入力してください：")
+dhcp_login <- str_c(ssh_user, input_dhcp_login)
+InputStr("ssh_password", "UTMのパスワードを入力してください：")
+session <- ssh_connect(dhcp_login, passwd=ssh_password)
+rm(ssh_password)
 dhcp_raw <- ssh_exec_internal(session, command = "execute dhcp lease-list")
 ssh_disconnect(session)
-# **** google login error tidyverseパッケージの対応待ち end ****
 # Format DHCP list
 list_dhcp <- read_lines_raw(dhcp_raw[[2]]) %>%
                lapply(rawToChar) %>%
@@ -335,7 +332,8 @@ for (i in 1:length(output_list)){
   OutputWorkbook(output_wb, i, output_list[[i]], output_csv_names[i])
 }
 write.csv(df_dhcp, str_c(output_path, "/dhcp.csv"))
-write.csv(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="cp932")
+sinet_table <- sinet_table %>% select(-"ウィルス対策ソフトのバージョン")
+write.table(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="cp932")
 saveWorkbook(output_wb, str_c(output_path, "/", utm_dir_name, ".xlsx"), overwrite=T)
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
