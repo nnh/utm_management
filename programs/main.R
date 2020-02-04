@@ -333,9 +333,9 @@ for (i in 1:length(output_list)){
 }
 write.csv(df_dhcp, str_c(output_path, "/dhcp.csv"))
 sinet_table <- sinet_table %>% select(-"ウィルス対策ソフトのバージョン")
-write.table(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="cp932")
+write.table(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="utf-8")
 saveWorkbook(output_wb, str_c(output_path, "/", utm_dir_name, ".xlsx"), overwrite=T)
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
-rm(list = ls())
+#rm(list = ls())
 
