@@ -1,24 +1,4 @@
-# Format UTM log
-# Mariko Ohtsuka
-# 2019/10/2 created
-# ------ library ------
-library("stringr")
-library("dplyr")
-library("tidyr")
-library("readr")
-library("googledrive")
-library("googlesheets4")
-library("ssh")
-library("here")
-library("openxlsx")
-# google authentication
-sheets_auth(
-  email = gargle::gargle_oauth_email(),
-  path = NULL,
-  scopes = "https://www.googleapis.com/auth/spreadsheets.readonly",
-  cache = gargle::gargle_oauth_cache(),
-  use_oob = gargle::gargle_oob_default(),
-  token = NULL)
+# main.R実行前にget_sheet.Rを実行してください
 # ------ function ------
 #' @title
 #' InputStr
@@ -337,5 +317,5 @@ write.table(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="u
 saveWorkbook(output_wb, str_c(output_path, "/", utm_dir_name, ".xlsx"), overwrite=T)
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
-#rm(list = ls())
+rm(list = ls())
 
