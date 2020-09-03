@@ -12,23 +12,6 @@ InputStr <- function(obj_name, str_prompt){
   assign(obj_name, temp, env=.GlobalEnv)
 }
 #' @title
-#' ReadLog
-#' @param
-#' input_file_path : Full path of csv to read
-#' @return
-#' String vector
-ReadLog <- function(input_file_path){
-  os <- .Platform$OS.type  # mac or windows
-  con <- file(description=input_file_path, open="rt")
-  if (os == "unix"){
-    lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "utf-8")
-  } else{
-    lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "cp932")
-  }
-  close(con=con)
-  return(lines)
-}
-#' @title
 #' GetLogFullName
 #' @param
 #' target : target file name
@@ -197,6 +180,7 @@ if (file.exists(output_path) == F) {
   dir.create(output_path)
 }
 # ------ Main processing ------
+source(file.path(here(), "programs", "common_function.R"))
 # Read utm log
 file_list <- list.files(input_path)
 target_file_list <- sapply(kTargetLog, GetLogFullName, file_list)
