@@ -35,7 +35,7 @@ getInputCsv <- function(targetFilePath, yyyymm){
   return(dfTop30)
 }
 getTargetCsvName <- function(targetPath){
-  temp_filenames <- list.files(targetPath) %>% str_subset("^S-8_t8-Bandwidth and Applications Report without guest-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}\\.csv$")
+  temp_filenames <- list.files(targetPath) %>% str_subset("Bandwidth and Applications Report without guest-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}.*csv$")
   return(temp_filenames)
 }
 # Align the units to megabytes.

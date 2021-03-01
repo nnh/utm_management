@@ -155,7 +155,7 @@ OutputWorkbook <- function(wb, sheetname, df, title){
   addStyle(wb, sheet=sheetname, header_style, rows=1, cols=1)
 }
 # ------ Constant definition ------
-kTargetLog <- c("Admin and System Events Report without guest",
+kTargetLog <- c("Admin and System Events Report",
                 "Bandwidth and Applications Report without guest",
                 "Client Reputation without guest",
                 "User Report without guest")
@@ -194,24 +194,13 @@ address_list <- read.csv(str_c(ext_path, "/sinet.txt"), header=T, as.is=T)
 # Get PC information
 sinet_table <- filter(address_list, ID == "sinet")$Item %>% read_sheet()
 static_ip_table <- filter(address_list, ID == "static_ip")$Item %>% read_sheet()
-# Get DHCP list
-input_dhcp_login <- filter(address_list, ID == "dhcp")$Item
-InputStr("ssh_user", "UTMのユーザー名を入力してください：")
-dhcp_login <- str_c(ssh_user, input_dhcp_login)
-InputStr("ssh_password", "UTMのパスワードを入力してください：")
-session <- ssh_connect(dhcp_login, passwd=ssh_password)
-rm(ssh_password)
-dhcp_raw <- ssh_exec_internal(session, command = "execute dhcp lease-list")
-ssh_disconnect(session)
-# Format DHCP list
-list_dhcp <- read_lines_raw(dhcp_raw[[2]]) %>%
-               lapply(rawToChar) %>%
-                 lapply(function(x){str_split_fixed(x, pattern="\t", 11)})
+## Get DHCP list
+list_dhcp <- read.delim(str_c(ext_path, "/dhcp.txt"), header=F, as.is=T)
 # Remove the space before the IP address
-for (i in 1:length(list_dhcp)){
-  list_dhcp[[i]][1] <- trimws(list_dhcp[[i]][1])
+for (i in 1:nrow(list_dhcp)){
+  list_dhcp[i, 1] <- str_trim(list_dhcp[i, 1])
 }
-df_dhcp <- unlist(list_dhcp) %>% matrix(nrow=length(list_dhcp), byrow=T) %>% data.frame(stringsAsFactors=F)
+df_dhcp <- list_dhcp
 colnames(df_dhcp) <- kDhcp_header
 # Get owner from hostname
 sinet_table <- rename(sinet_table, Hostname="コンピュータ名")

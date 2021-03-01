@@ -1,7 +1,7 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2020/9/2 modified
+# 2021/3/1 modified
 # ------ library ------
 library("stringr")
 library("dplyr")
@@ -9,7 +9,6 @@ library("tidyr")
 library("readr")
 library("googledrive")
 library("googlesheets4")
-library("ssh")
 library("here")
 library("openxlsx")
 # google authentication
