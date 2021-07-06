@@ -160,10 +160,17 @@ kTargetLog <- c("Admin and System Events Report",
                 "Client Reputation without guest",
                 "User Report without guest")
 kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
-kDhcp_header <- c("IP", "v2", "MAC-Address", "Hostname", "v5", "v6", "v7", "VCI", "v9", "v10", "Expiry")
+kDhcp_header_mac <- c("IP", "v2", "MAC-Address", "Hostname", "v5", "v6", "v7", "VCI", "v9", "v10", "Expiry")
+kDhcp_header_win <- c("IP", "MAC-Address", "Hostname", "VCI", "Expiry", "v6", "v7", "v8", "v9", "v10")
 # ------ Get project path ------
-here() %>% setwd()
-setwd("..")
+os <- .Platform$OS.type  # mac or windows
+parent_path <- ""
+if (os == "unix"){
+  volume_str <- "/Volumes"
+} else{
+  volume_str <- "//aronas"
+}
+input_parent_path <- str_c(volume_str, "/Archives/ISR/SystemAssistant/月例・随時作業関連/UTMログ/レポート/")
 #target_yyyymm <- "201906"
 if (exists("target_yyyymm")){
   yyyymm <- target_yyyymm
@@ -172,10 +179,10 @@ if (exists("target_yyyymm")){
   yyyymm <- str_c(format(last_month, "%Y"), format(last_month, "%m"))
 }
 utm_dir_name <- str_c("UTM Logs ", yyyymm)
-parent_path <- str_c(getwd(), "/レポート/", utm_dir_name)
+parent_path <- str_c(input_parent_path, utm_dir_name)
 input_path <- str_c(parent_path, "/input")
 ext_path <- str_c(parent_path, "/ext")
-output_path <- str_c(parent_path, "/output")
+output_path <- here("output")
 if (file.exists(output_path) == F) {
   dir.create(output_path)
 }
@@ -201,7 +208,11 @@ for (i in 1:nrow(list_dhcp)){
   list_dhcp[i, 1] <- str_trim(list_dhcp[i, 1])
 }
 df_dhcp <- list_dhcp
-colnames(df_dhcp) <- kDhcp_header
+if (ncol(df_dhcp) == 11){
+  colnames(df_dhcp) <- kDhcp_header_mac
+} else {
+  colnames(df_dhcp) <- kDhcp_header_win
+}
 # Get owner from hostname
 sinet_table <- rename(sinet_table, Hostname="コンピュータ名")
 # Check for duplicate hostname
