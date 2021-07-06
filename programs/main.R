@@ -162,32 +162,8 @@ kTargetLog <- c("Admin and System Events Report",
 kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
 kDhcp_header_mac <- c("IP", "v2", "MAC-Address", "Hostname", "v5", "v6", "v7", "VCI", "v9", "v10", "Expiry")
 kDhcp_header_win <- c("IP", "MAC-Address", "Hostname", "VCI", "Expiry", "v6", "v7", "v8", "v9", "v10")
-# ------ Get project path ------
-os <- .Platform$OS.type  # mac or windows
-parent_path <- ""
-if (os == "unix"){
-  volume_str <- "/Volumes"
-} else{
-  volume_str <- "//aronas"
-}
-input_parent_path <- str_c(volume_str, "/Archives/ISR/SystemAssistant/月例・随時作業関連/UTMログ/レポート/")
-#target_yyyymm <- "201906"
-if (exists("target_yyyymm")){
-  yyyymm <- target_yyyymm
-} else{
-  last_month <- as.Date(format(Sys.Date(), "%Y-%m-01")) - 1
-  yyyymm <- str_c(format(last_month, "%Y"), format(last_month, "%m"))
-}
-utm_dir_name <- str_c("UTM Logs ", yyyymm)
-parent_path <- str_c(input_parent_path, utm_dir_name)
-input_path <- str_c(parent_path, "/input")
-ext_path <- str_c(parent_path, "/ext")
-output_path <- here("output")
-if (file.exists(output_path) == F) {
-  dir.create(output_path)
-}
 # ------ Main processing ------
-source(file.path(here(), "programs", "common_function.R"))
+source(file.path(here(), "programs", "common.R"))
 # Read utm log
 file_list <- list.files(input_path)
 target_file_list <- sapply(kTargetLog, GetLogFullName, file_list)

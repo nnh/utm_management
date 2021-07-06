@@ -52,7 +52,7 @@ calcByte <- function(targetStr){
   return(temp)
 }
 # ------ main ------
-source(file.path(here(), "programs", "common_function.R"))
+source(file.path(here(), "programs", "common.R"))
 if (exists("target_yyyymm")){
   yyyymm <- target_yyyymm
 } else{
@@ -78,15 +78,11 @@ if (exists("temp_targetYyyymm")){
   targetYyyymm <- c(targetYyyymm, temp_targetYyyymm)
 }
 # file path
-here() %>% setwd()
-setwd("..")
 targetFolderName <- str_c("UTM Logs ", targetYyyymm)
-parentPath <- str_c(getwd(), "/レポート/")
-targetYyyymmFolderPath <- str_c(parentPath, targetFolderName)
-inputPath <- str_c(targetYyyymmFolderPath, "/input/")
-outputPath <- str_c(targetYyyymmFolderPath, "/output/")
-extPath <- str_c(targetYyyymmFolderPath, "/ext/")
-targetFilePath <- map(inputPath, getTargetCsvName) %>% str_c(inputPath, .)
+targetYyyymmFolderPath <- str_c(input_parent_path, targetFolderName)
+input_path <- str_c(targetYyyymmFolderPath, "/input/")
+ext_path <- str_c(targetYyyymmFolderPath, "/ext/")
+targetFilePath <- map(input_path, getTargetCsvName) %>% str_c(input_path, .)
 #
 outputTop30Df <- data.frame(matrix(rep(NA), ncol=4, nrow=1))[numeric(0), ]
 for (i in 1:length(targetYyyymm)){
@@ -104,7 +100,7 @@ applicationList <- data.frame(applications, applicationsRank)
 applicationList$applicationsRank <- ifelse(applicationList$applications == kTotalTitle, 99, applicationList$applicationsRank)
 outputDf <- left_join(outputTop30Df, applicationList, by=c("application"="applications")) %>% arrange(desc(applicationsRank), application, yyyymm)
 # output Excel file
-template_wb <- str_c(extPath[length(extPath)], "/bandwidthTemplate.xlsx") %>% loadWorkbook(file=.)
+template_wb <- str_c(ext_path[length(ext_path)], "/bandwidthTemplate.xlsx") %>% loadWorkbook(file=.)
 outputSheetName <- "Sheet1"
 writeData(template_wb, sheet=outputSheetName, x=outputDf, withFilter=F, sep=",", colNames=T, startCol=1, startRow=1)
-saveWorkbook(template_wb, str_c(outputPath[length(outputPath)], "bandwidth_", yyyymm, ".xlsx"), overwrite=T)
+saveWorkbook(template_wb, str_c(output_path, "/bandwidth_", yyyymm, ".xlsx"), overwrite=T)
