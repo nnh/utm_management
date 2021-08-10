@@ -163,7 +163,7 @@ kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
 kDhcp_header_mac <- c("IP", "v2", "MAC-Address", "Hostname", "v5", "v6", "v7", "VCI", "v9", "v10", "Expiry")
 kDhcp_header_win <- c("IP", "MAC-Address", "Hostname", "VCI", "Expiry", "v6", "v7", "v8", "v9", "v10")
 # ------ Main processing ------
-source(file.path(here(), "programs", "common.R"))
+source(file.path(here(), "programs", "common.R"), encoding="UTF-8")
 # Read utm log
 file_list <- list.files(input_path)
 target_file_list <- sapply(kTargetLog, GetLogFullName, file_list)
@@ -210,7 +210,7 @@ private_ip <- filter(static_ip_table, !is.na(ホスト名)) %>%
                          "Duplicate") %>%
                     bind_rows(dynamic_ip)
 # Get Whitelist and Blacklist
-raw_excluded <- read.csv(str_c(ext_path, "/excluded.csv"), as.is=T, na.strings="")
+raw_excluded <- read.csv(str_c(ext_path, "/excluded.csv"), as.is=T, na.strings="", fileEncoding="UTF-8")
 # IP list of network part
 excluded <- raw_excluded$IP %>%
               str_split_fixed(pattern="/", n=2) %>%
