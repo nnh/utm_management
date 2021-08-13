@@ -1,13 +1,9 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2021/7/6 modified
+# 2021/8/13 modified
 # ------ library ------
-library("stringr")
-library("dplyr")
-library("tidyr")
-library("readr")
-library("googledrive")
+library("tidyverse")
 library("googlesheets4")
 library("here")
 library("openxlsx")

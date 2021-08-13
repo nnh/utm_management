@@ -150,9 +150,24 @@ OutputWorkbook <- function(wb, sheetname, df, title){
            setColWidths(wb, i, cols = c(1, 2, 3, 4, 5), widths = c(90, 20, 20, 80))
          }
   )
-  writeData(wb, sheet=sheetname, x=c(title, temp_df), withFilter=F, sep=",")
+  writeData(wb, sheet=sheetname, x=title, withFilter=F, sep="\t")
+  writeData(wb, sheet=sheetname, x=temp_df, withFilter=F, sep="\t", startRow=2)
   pageSetup(wb, sheet=sheetname, orientation="landscape", fitToWidth=T, fitToHeight=F)
   addStyle(wb, sheet=sheetname, header_style, rows=1, cols=1)
+}
+#' @title convertFromCharToDf
+#' @description Convert a comma-separated vector to a data frame
+#' @param input_data : a vector
+#' @return a data frame
+convertFromCharToDf <- function(input_data){
+  comma_count <- str_extract_all(input_data, ",") %>% map(length)
+  max_comma_count <- comma_count %>% unlist() %>% max()
+  add_comma_count <- map(comma_count, function(x){ max_comma_count - x })
+  add_comma <- map(add_comma_count, function(x){ rep(",", x) %>% str_c(collapse = "") })
+  combine_comma <- str_c(input_data, add_comma)
+  column_names <- str_c("col", 1:(max_comma_count+1))
+  output_df <- combine_comma %>% as_tibble() %>% separate("value", column_names, sep=",")
+  return(output_df)
 }
 # ------ Constant definition ------
 kTargetLog <- c("Admin and System Events Report",
@@ -263,11 +278,14 @@ ip_list <- excluded %>%
 # NA -> ""
 ip_list[is.na(ip_list)] <- ""
 # Add information such as hostname to the log
-output_list <- sapply(raw_log_list, AddUserInfo, ip_list)
+temp_output_list <- sapply(raw_log_list, AddUserInfo, ip_list)
 # output logs
-output_csv_names <- names(output_list) %>% str_extract(pattern="[^\\/]*$")
+output_csv_names <- names(temp_output_list) %>% str_extract(pattern="[^\\/]*$")
+# convert from vector to dataframe
 output_wb <- createWorkbook()
-for (i in 1:length(output_list)){
+output_list <- NULL
+for (i in 1:length(temp_output_list)){
+  output_list[[i]] <- convertFromCharToDf(temp_output_list[[i]])
   rownames(output_list[[i]]) <- NULL
   OutputWorkbook(output_wb, i, output_list[[i]], output_csv_names[i])
 }
@@ -278,4 +296,3 @@ saveWorkbook(output_wb, str_c(output_path, "/", utm_dir_name, ".xlsx"), overwrit
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
 rm(list = ls())
-
