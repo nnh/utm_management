@@ -199,6 +199,16 @@ kDhcp_header_win <- c("IP", "MAC-Address", "Hostname", "VCI", "Expiry", "v6", "v
 kDelStr <- "*delete*"
 # ------ Main processing ------
 source(file.path(here(), "programs", "common.R"), encoding="UTF-8")
+# Read vpn access log
+vpn_access_log <- read_excel(input_vpn_log_path, sheet="connected_from") %>% filter(!is.na(ユーザー)) %>%
+  select(IP=接続元IPアドレス, User=ユーザー) %>% distinct_all()
+vpn_access_log$Duplicate <- "FALSE"
+vpn_access_log$Department <- ""
+vpn_access_log$Hostname <- ""
+vpn_access_log$MAC_Address <- ""
+if (!exists("vpn_access_log")){
+  stop(str_c("VPN CardLogs ", yyyymm, ".xlsmを所定のフォルダに格納して再実行してください"))
+}
 # Read utm log
 file_list <- list.files(input_path)
 target_file_list <- sapply(kTargetLog, GetLogFullName, file_list)
@@ -297,6 +307,8 @@ ip_list <- excluded %>%
                  bind_rows(private_ip)
 # NA -> ""
 ip_list[is.na(ip_list)] <- ""
+# Conbine vpn access log
+ip_list <- bind_rows(vpn_access_log, ip_list)
 # Add information such as hostname to the log
 temp_output_list <- sapply(raw_log_list, AddUserInfo, ip_list)
 # output logs

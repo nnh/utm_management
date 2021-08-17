@@ -36,3 +36,5 @@ output_path <- here("output")
 if (file.exists(output_path) == F) {
   dir.create(output_path)
 }
+# vpn logs
+input_vpn_log_path <- str_c(volume_str, "/Archives/ISR/SystemAssistant/月例・随時作業関連/VPN・入退室ログ/VPN CardLogs ", yyyymm, ".xlsm")

@@ -7,6 +7,7 @@ library("tidyverse")
 library("googlesheets4")
 library("here")
 library("openxlsx")
+library("readxl")
 # google authentication
 gs4_auth(
   email = gargle::gargle_oauth_email(),
