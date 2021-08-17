@@ -86,32 +86,6 @@ AddUserInfo <- function(raw_log, ip_list){
   return(output_file)
 }
 #' @title
-#' DeleteRows
-#' @param
-#' target : target vector
-#' target_header : Header to delete
-#' @return
-#' vector
-DeleteRows <- function(target, target_header){
-  delete_f <- F
-  for (i in 1:length(target)){
-    if(target[i] %in% target_header){
-      delete_f <- T
-    } else if (str_trim(target[i], side = "both") == ""){
-      if (delete_f){
-        target[i] <- NA
-      }
-      delete_f <- F
-    }
-    if (delete_f){
-      target[i] <- NA
-    }
-  }
-  res <- na.omit(target)
-  attr(res, "na.action") <- NULL
-  return(res)
-}
-#' @title
 #' OutputWorkbook
 #' @param
 #' wb : Workbook object(openxlsx)
@@ -133,7 +107,7 @@ OutputWorkbook <- function(wb, sheetname, df, title){
          # Bandwidth and Applications Report
          "2"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
-           delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Activeユーザー###")
+           delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Active Users###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # Client Reputation
@@ -151,9 +125,30 @@ OutputWorkbook <- function(wb, sheetname, df, title){
          }
   )
   writeData(wb, sheet=sheetname, x=title, withFilter=F, sep="\t")
-  writeData(wb, sheet=sheetname, x=temp_df, withFilter=F, sep="\t", startRow=2)
+  writeData(wb, sheet=sheetname, x=temp_df, withFilter=F, sep="\t", startRow=2, colNames=F)
   pageSetup(wb, sheet=sheetname, orientation="landscape", fitToWidth=T, fitToHeight=F)
   addStyle(wb, sheet=sheetname, header_style, rows=1, cols=1)
+}
+#' @title DeleteRows
+#' @description Remove lines not to be printed
+#' @param input_df a data frame
+#' @param condition_str Heading of lines not to output
+#' @return a data frame
+DeleteRows <- function(input_df, condition_str){
+  output_df <- input_df
+  delete_f <- F
+  for(i in 1:nrow(output_df)){
+    if (output_df[i, 1] %in% condition_str){
+      delete_f <- T
+    } else if (str_trim(output_df[i, 1]) == ""){
+      delete_f <- F
+    }
+    if (delete_f){
+      output_df[i, 1] <- kDelStr
+    }
+  }
+  output_df <- output_df %>% filter(col1 != kDelStr)
+  return(output_df)
 }
 #' @title convertFromCharToDf
 #' @description Convert a comma-separated vector to a data frame
@@ -177,6 +172,7 @@ kTargetLog <- c("Admin and System Events Report",
 kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
 kDhcp_header_mac <- c("IP", "v2", "MAC-Address", "Hostname", "v5", "v6", "v7", "VCI", "v9", "v10", "Expiry")
 kDhcp_header_win <- c("IP", "MAC-Address", "Hostname", "VCI", "Expiry", "v6", "v7", "v8", "v9", "v10")
+kDelStr <- "*delete*"
 # ------ Main processing ------
 source(file.path(here(), "programs", "common.R"), encoding="UTF-8")
 # Read utm log
