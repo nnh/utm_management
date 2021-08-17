@@ -125,9 +125,33 @@ OutputWorkbook <- function(wb, sheetname, df, title){
          }
   )
   writeData(wb, sheet=sheetname, x=title, withFilter=F, sep="\t")
-  writeData(wb, sheet=sheetname, x=temp_df, withFilter=F, sep="\t", startRow=2, colNames=F)
+  output_list <- EditWriteData(temp_df)
+  for (i in 1:length(output_list)){
+    output_row <- i + 1
+    writeData(wb, sheet=sheetname, x=output_list[[i]], withFilter=F, sep="\t", startRow=output_row, colNames=F)
+  }
   pageSetup(wb, sheet=sheetname, orientation="landscape", fitToWidth=T, fitToHeight=F)
   addStyle(wb, sheet=sheetname, header_style, rows=1, cols=1)
+}
+#' @title EditWriteData
+#' @description Get the last column of the data frame that contains data. Delete the columns after the acquired column.
+#' Perform processing for each row of the input data frame.
+#' @param input_df a data frame
+#' @return a list
+EditWriteData <- function(input_df){
+  output_list <- NULL
+  for (i in 1:nrow(input_df)){
+    temp_row <- input_df[i, ]
+    for (j in ncol(temp_row):1){
+      if (str_trim(temp_row[1, j] == "")){
+        temp_row <- temp_row[-j]
+      } else {
+        output_list[[i]] <- temp_row
+        break
+      }
+    }
+  }
+  return(output_list)
 }
 #' @title DeleteRows
 #' @description Remove lines not to be printed
