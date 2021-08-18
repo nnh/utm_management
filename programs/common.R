@@ -32,9 +32,14 @@ utm_dir_name <- str_c("UTM Logs ", yyyymm)
 parent_path <- str_c(input_parent_path, utm_dir_name)
 input_path <- str_c(parent_path, "/input")
 ext_path <- str_c(parent_path, "/ext")
-output_path <- here("output")
+output_path <- str_c(parent_path, "/output")
 if (file.exists(output_path) == F) {
   dir.create(output_path)
 }
 # vpn logs
 input_vpn_log_path <- str_c(volume_str, "/Archives/ISR/SystemAssistant/月例・随時作業関連/VPN・入退室ログ/VPN CardLogs ", yyyymm, ".xlsm")
+if (os == "unix"){
+  input_vpn_log_path <- iconv(input_vpn_log_path, from="utf-8", to="utf-8")
+} else{
+  input_vpn_log_path <- iconv(input_vpn_log_path, from="utf-8", to="cp932")
+}

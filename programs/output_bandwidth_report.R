@@ -3,6 +3,13 @@ library(openxlsx)
 library(here)
 kTotalTitle = "Total Bytes Transferred"
 # ------ function ------
+#' @title getTargetRows
+#' @description Return data frame filtered by condition
+#' @param inputCsv Target csv
+#' @param targetTitle Target header
+#' @param rowCount Number of rows
+#' @param columnNames Target column name
+#' @return A data frame
 getTargetRows <- function(inputCsv, targetTitle, rowCount, columnNames){
   checkTitle <- map_chr(inputCsv, function(x){ str_detect(x, targetTitle) })
   titleRow <- which(checkTitle == TRUE)
@@ -10,15 +17,20 @@ getTargetRows <- function(inputCsv, targetTitle, rowCount, columnNames){
   targetEndRow <- titleRow + rowCount + 1
   temp_target <- inputCsv[targetStartRow:targetEndRow] %>%
     map(function(x){ str_split(x, ",") }) %>%
-    map(function(x){unlist(x)}) %>%
-    do.call(function(...) rbind(data.frame(), ...), .)
+      map(function(x){ unlist(x) }) %>%
+        do.call(function(...) rbind(data.frame(), ...), .)
   names(temp_target) <- columnNames
   return(temp_target)
 }
+#' @title getInputCsv
+#' @description Get information on "###Top 30 Applications by Bandwidth and Sessions###"
+#' @param targetFilePath Path of the input file
+#' @param yyyymm Target year and month
+#' @return A data frame
 getInputCsv <- function(targetFilePath, yyyymm){
   inputCsv <- ReadLog(targetFilePath) %>% str_replace_all(pattern="(?<=[0-9]),(?=[0-9])", replacement="") %>%  # Remove commas for digits
     gsub(pattern="\"", replacement="", x=., fixed=T) %>%
-    str_replace_all(pattern='^"|"$', replacement="")  # Remove double quotes at the beginning and end of sentence
+      str_replace_all(pattern='^"|"$', replacement="")  # Remove double quotes at the beginning and end of sentence
   dfTotal <- getTargetRows(inputCsv,
                            "###Traffic Statistics###",
                            8,
@@ -34,11 +46,18 @@ getInputCsv <- function(targetFilePath, yyyymm){
   dfTop30 <- dfTop30 %>% select("application", "バンド幅", "bandwidth", "yyyymm") %>% rbind(addTotalRow)
   return(dfTop30)
 }
+#' @title getTargetCsvName
+#' @description Get the file name of "Bandwidth and Applications Report without guest" for the target year and month.
+#' @param targetPath  Path of the input file
+#' @return String of the file name
 getTargetCsvName <- function(targetPath){
   temp_filenames <- list.files(targetPath) %>% str_subset("Bandwidth and Applications Report without guest-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}.*csv$")
   return(temp_filenames)
 }
-# Align the units to megabytes.
+#' @title calcByte
+#' @description  Align the units to megabytes.
+#' @param targetStr String of the bandwidth
+#' @return String of the result of the unit conversion
 calcByte <- function(targetStr){
   numTarget <- targetStr %>% str_replace(pattern="MB|GB|TB", "") %>% as.numeric()
   if (str_detect(targetStr, "MB")){
@@ -52,7 +71,7 @@ calcByte <- function(targetStr){
   return(temp)
 }
 # ------ main ------
-source(file.path(here(), "programs", "common.R"))
+source(file.path(here(), "programs", "common.R"), encoding="UTF-8")
 if (exists("target_yyyymm")){
   yyyymm <- target_yyyymm
 } else{
@@ -61,30 +80,21 @@ if (exists("target_yyyymm")){
 }
 yyyy <- str_sub(yyyymm, 1, 4)
 mm <- str_sub(yyyymm, 5, 6)
-numMm <- as.numeric(mm)
-if (numMm <= 3){
-  temp_targetYyyymm <- 1:numMm %>% as.character() %>% str_pad(2, pad=0) %>% str_c(yyyy, .)
-  yyyy <- as.numeric(yyyy) - 1
-  yyyy <- as.character(yyyy)
-  numMm <- 12
-} else {
-  if (exists("temp_targetYyyymm")){
-    rm(temp_targetYyyymm)
-  }
-}
-# Covering the current year
-targetYyyymm <- 4:numMm %>% as.character() %>% str_pad(2, pad=0) %>% str_c(yyyy, .)
-if (exists("temp_targetYyyymm")){
-  targetYyyymm <- c(targetYyyymm, temp_targetYyyymm)
-}
+lastyear <- {as.numeric(yyyy) - 1} %>% as.character()
+lastyear_mm <- mm %>% as.numeric() %>% .:12 %>% as.character() %>% str_pad(2, pad=0)
+thisyear_mm <- mm %>% as.numeric() %>% 1:.  %>% as.character() %>% str_pad(2, pad=0)
+lastyear_yyyymm <- str_c(lastyear, lastyear_mm)
+thisyear_yyyymm <- str_c(yyyy, thisyear_mm)
+# Covering the same month of the previous year or later
+targetYyyymm <- c(lastyear_yyyymm, thisyear_yyyymm)
 # file path
 targetFolderName <- str_c("UTM Logs ", targetYyyymm)
 targetYyyymmFolderPath <- str_c(input_parent_path, targetFolderName)
 input_path <- str_c(targetYyyymmFolderPath, "/input/")
 ext_path <- str_c(targetYyyymmFolderPath, "/ext/")
 targetFilePath <- map(input_path, getTargetCsvName) %>% str_c(input_path, .)
-#
-outputTop30Df <- data.frame(matrix(rep(NA), ncol=4, nrow=1))[numeric(0), ]
+# Get "###Top 30 Applications by Bandwidth and Sessions###"
+outputTop30Df <- NULL
 for (i in 1:length(targetYyyymm)){
   temp <- getInputCsv(targetFilePath[i], targetYyyymm[i])
   tempYM <- temp[1 ,"yyyymm"]
@@ -100,7 +110,10 @@ applicationList <- data.frame(applications, applicationsRank)
 applicationList$applicationsRank <- ifelse(applicationList$applications == kTotalTitle, 99, applicationList$applicationsRank)
 outputDf <- left_join(outputTop30Df, applicationList, by=c("application"="applications")) %>% arrange(desc(applicationsRank), application, yyyymm)
 # output Excel file
-template_wb <- str_c(ext_path[length(ext_path)], "/bandwidthTemplate.xlsx") %>% loadWorkbook(file=.)
+template_wb <- createWorkbook()
 outputSheetName <- "Sheet1"
+addWorksheet(template_wb, outputSheetName)
+setColWidths(template_wb, outputSheetName, cols=1:5, width=c(30, 12, 12, 10, 8))
 writeData(template_wb, sheet=outputSheetName, x=outputDf, withFilter=F, sep=",", colNames=T, startCol=1, startRow=1)
+pageSetup(template_wb, outputSheetName, orientation="portrait", fitToWidth=T, printTitleRows=1)
 saveWorkbook(template_wb, str_c(output_path, "/bandwidth_", yyyymm, ".xlsx"), overwrite=T)
