@@ -1,23 +1,17 @@
 # main.R実行前にget_sheet.Rを実行してください
 # ------ function ------
-#' @title
-#' InputStr
-#' @param
-#' obj_name : Object name for storing input value
-#' str_prompt : String output at the prompt
-#' @return
-#' No return value
+#' @title InputStr
+#' @param obj_name Object name for storing input value
+#' @param str_prompt String output at the prompt
+#' @return No return value
 InputStr <- function(obj_name, str_prompt){
   temp <- readline(prompt=str_prompt)
   assign(obj_name, temp, env=.GlobalEnv)
 }
-#' @title
-#' GetLogFullName
-#' @param
-#' target : target file name
-#' file_list : file list
-#' @return
-#' Full name of target file
+#' @title GetLogFullName
+#' @param target target file name
+#' @param file_list file list
+#' @return Full name of target file
 GetLogFullName <- function(target, file_list){
   temp_idx <- str_which(file_list, target)
   if (length(temp_idx) > 0){
@@ -26,33 +20,24 @@ GetLogFullName <- function(target, file_list){
     return(NA)
   }
 }
-#' @title
-#' IntToBitVect
-#' @param
-#' x : Decimal number or string
-#' @return
-#' Vector of values converted to binary (8bit)
+#' @title IntToBitVect
+#' @param x Decimal number or string
+#' @return Vector of values converted to binary (8bit)
 IntToBitVect <- function(x){
   temp <- rev(as.numeric(intToBits(x))[1:8])
   return(temp)
 }
-#' @title
-#' BitVectToInt
-#' @param
-#' x : Vector of 0 or 1 values
-#' @return
-#' Integer
+#' @title BitVectToInt
+#' @param x Vector of 0 or 1 values
+#' @return Integer
 BitVectToInt<-function(x) {
   temp <- packBits(rev(c(rep(F, 32 - length(x) %% 32), as.logical(x))), "integer")
   return(temp)
 }
-#' @title
-#' AddUserInfo
-#' @param
-#' raw_log : log
-#' ip_list : private IP lists, whitelists and blacklists
-#' @return
-#' List of logs
+#' @title AddUserInfo
+#' @param raw_log log
+#' @param ip_list private IP lists, whitelists and blacklists
+#' @return List of logs
 AddUserInfo <- function(raw_log, ip_list){
   output_file <- raw_log %>% str_replace_all(pattern="(?<=[0-9]),(?=[0-9])", replacement="") %>%  # Remove commas for digits
                    gsub(pattern="\"", replacement="", x=., fixed=T) %>%
@@ -85,14 +70,11 @@ AddUserInfo <- function(raw_log, ip_list){
   }
   return(output_file)
 }
-#' @title
-#' OutputWorkbook
-#' @param
-#' wb : Workbook object(openxlsx)
-#' sheetname : Worksheet name
-#' df : Data frame to output
-#' @return
-#' none
+#' @title OutputWorkbook
+#' @param wb Workbook object(openxlsx)
+#' @param sheetname Worksheet name
+#' @param df Data frame to output
+#' @return none
 OutputWorkbook <- function(wb, sheetname, df, title){
   header_style <- createStyle(fontSize=16)
   addWorksheet(wb, sheetname)
@@ -198,7 +180,7 @@ kDhcp_header_mac <- c("IP", "v2", "MAC-Address", "Hostname", "v5", "v6", "v7", "
 kDhcp_header_win <- c("IP", "MAC-Address", "Hostname", "VCI", "Expiry", "v6", "v7", "v8", "v9", "v10")
 kDelStr <- "*delete*"
 # ------ Main processing ------
-source(file.path(here(), "programs", "common.R"), encoding="UTF-8")
+source(here("programs", "common.R"), encoding="UTF-8")
 # Read vpn access log
 vpn_access_log <- read_excel(input_vpn_log_path, sheet="connected_from") %>% filter(!is.na(ユーザー)) %>%
   select(IP=接続元IPアドレス, User=ユーザー) %>% distinct_all()
@@ -327,4 +309,7 @@ write.table(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="u
 saveWorkbook(output_wb, str_c(output_path, "/", utm_dir_name, ".xlsx"), overwrite=T)
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
+rm(list = ls())
+# Output bandwidth report
+source(here("programs", "output_bandwidth_report.R"), encoding="UTF-8")
 rm(list = ls())

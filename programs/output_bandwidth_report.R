@@ -1,6 +1,8 @@
 library(tidyverse)
-library(openxlsx)
 library(here)
+library(rmarkdown)
+library(knitr)
+library(ggplot2)
 kTotalTitle = "Total Bytes Transferred"
 # ------ function ------
 #' @title getTargetRows
@@ -71,7 +73,7 @@ calcByte <- function(targetStr){
   return(temp)
 }
 # ------ main ------
-source(file.path(here(), "programs", "common.R"), encoding="UTF-8")
+source(here("programs", "common.R"), encoding="UTF-8")
 if (exists("target_yyyymm")){
   yyyymm <- target_yyyymm
 } else{
@@ -109,11 +111,23 @@ applicationsRank <- map_int(applications, function(x){
 applicationList <- data.frame(applications, applicationsRank)
 applicationList$applicationsRank <- ifelse(applicationList$applications == kTotalTitle, 99, applicationList$applicationsRank)
 outputDf <- left_join(outputTop30Df, applicationList, by=c("application"="applications")) %>% arrange(desc(applicationsRank), application, yyyymm)
-# output Excel file
-template_wb <- createWorkbook()
-outputSheetName <- "Sheet1"
-addWorksheet(template_wb, outputSheetName)
-setColWidths(template_wb, outputSheetName, cols=1:5, width=c(30, 12, 12, 10, 8))
-writeData(template_wb, sheet=outputSheetName, x=outputDf, withFilter=F, sep=",", colNames=T, startCol=1, startRow=1)
-pageSetup(template_wb, outputSheetName, orientation="portrait", fitToWidth=T, printTitleRows=1)
-saveWorkbook(template_wb, str_c(output_path, "/bandwidth_", yyyymm, ".xlsx"), overwrite=T)
+# Create a line chart.
+plot_df <- outputDf
+plot_total <- "Total Bytes Transferred"
+plot_target <- c("IKE", "SSH", "HTTPS", "HTTP", "udp/19305", "udp/443", "udp/8801", "tcp/8052")
+plot_df$bandwidth <- {as.numeric(plot_df$bandwidth) / 1024}
+df_plot <- plot_df %>% filter(application %in% c(plot_total, plot_target))
+df_other <- plot_df %>% filter(!(application %in% c(plot_total, plot_target)))
+df_other <- summarise(group_by(df_other, yyyymm), bandwidth=sum(bandwidth))
+df_other$application <- "others"
+df_plot <- bind_rows(df_plot, df_other)
+lineplot <- ggplot(df_plot, aes(x=yyyymm, y=bandwidth, color=application, group=application)) +
+  geom_line() +
+  geom_point() +
+  labs(title=kTotalTitle, x="Target date", y="Bandwidth(GB)")
+output_bandwidth <- str_c("bandwidth_", yyyymm, ".html")
+render(here("programs", "output_bandwidth_report.Rmd"),
+       output_format=html_document(),
+       output_dir=here(),
+       output_file=output_bandwidth)
+file.rename(here(output_bandwidth), str_c(volume_str, "/Archives/Log/UTM/", output_bandwidth))
