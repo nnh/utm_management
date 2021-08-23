@@ -85,6 +85,7 @@ OutputWorkbook <- function(wb, sheetname, df, title){
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 8), widths = c(18, 30, 25, 35, 22, 52))
            delete_target_header <- c("###Login Summary By Date###", "###Events by Date###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
+           temp_df <- getLoginSummaryInfo(temp_df)
          },
          # Bandwidth and Applications Report
          "2"={
@@ -170,6 +171,79 @@ convertFromCharToDf <- function(input_data){
   output_df <- combine_comma %>% as_tibble() %>% separate("value", column_names, sep=",")
   return(output_df)
 }
+#' @title GetMaintenanceIpInfo
+#' @param static_ip_table a data frame
+#' @param anet_ip_list a vector
+#' @return A vector of IP addresses for maintenance
+GetMaintenanceIpInfo <- function(static_ip_table, anet_ip_list){
+  dhcp_info <- static_ip_table %>% filter((ホスト名 == "DHCP Start" | ホスト名 == "DHCP End") & (セグメント名 == "nmccrc" |セグメント名 == "datacenter")) %>%
+    separate(IPアドレス, c("ip1", "ip2", "ip3", "ip4"), sep="\\.") %>%
+    arrange(as.numeric(ip1), as.numeric(ip2), as.numeric(ip3), as.numeric(ip4))
+  # VPN only connection from nmccrc
+  dhcp_info <- dhcp_info %>% filter(ip1 == "192" | (ip1 == "172" & ip3 == 0))
+  dhcp_info$end <- NA
+  i <- 1
+  while(i <= nrow(dhcp_info)){
+    dhcp_info[i, "end"] <- dhcp_info[i + 1, "ip4"]
+    i <- i + 2
+  }
+  dhcp_info <- dhcp_info %>% filter(!is.na(end))
+  dc_maintenance_ip_range <- NULL
+  for (i in 1:nrow(dhcp_info)){
+    network <- str_c(dhcp_info[i, "ip1"], dhcp_info[i, "ip2"], dhcp_info[i, "ip3"], sep=".")
+    host_range <- as.numeric(dhcp_info[i, "ip4"]):as.numeric(dhcp_info[i, "end"])
+    dc_maintenance_ip_range <- c(dc_maintenance_ip_range, str_c(network, host_range, sep="."))
+  }
+  # Get maintenance company information
+  anet_maintenance_ip_range <- map(anet_ip_list, function(x){
+    subnet_mask <- str_split(x, "/") %>% unlist()
+    if (subnet_mask[2] == 24){
+      host <- 0:255
+      network <- subnet_mask[1] %>% str_extract("[0-9]+\\.[0-9]+\\.[0-9]+\\.")
+      return(str_c(network, host))
+    } else {
+      return(subnet_mask[1])
+    }
+  }) %>% unlist()
+  maintenance_ip_range <- c(dc_maintenance_ip_range, anet_maintenance_ip_range, "127.0.0.1")
+  return(maintenance_ip_range)
+}
+#' @title getLoginSummaryInfo
+#' @param input_df a data frame
+#' @return a data frame
+getLoginSummaryInfo <- function(input_df){
+  temp_df <- input_df
+  check_f <- F
+  for (i in 1:nrow(temp_df)){
+    output_str <- NULL
+    if (check_f & temp_df[i, 1] == ""){
+      break
+    }
+    if (check_f){
+      # Check User
+      if (!(temp_df[i, 2] %in% fortigate_users)){
+        output_str <- c(output_str, "未登録ユーザー")
+      }
+      # Check login Interface
+      temp_ip <- str_extract(temp_df[i, 3], "[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
+      if (!is.na(temp_ip)){
+        if (!(temp_ip %in% maintenanceIpInfo)){
+          output_str <- c(output_str, "範囲外IPアドレス")
+        }
+      }
+      if (is.null(output_str)){
+        output_str <- "OK"
+      } else {
+        output_str <- str_c(output_str, collapse=",")
+      }
+      temp_df[i, ncol(temp_df) - 1] <- output_str
+    }
+    if (temp_df[i, 2] == "User Name"){
+      check_f <- T
+    }
+  }
+  return(temp_df)
+}
 # ------ Constant definition ------
 kTargetLog <- c("Admin and System Events Report",
                 "Bandwidth and Applications Report without guest",
@@ -179,6 +253,7 @@ kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
 kDhcp_header_mac <- c("IP", "v2", "MAC-Address", "Hostname", "v5", "v6", "v7", "VCI", "v9", "v10", "Expiry")
 kDhcp_header_win <- c("IP", "MAC-Address", "Hostname", "VCI", "Expiry", "v6", "v7", "v8", "v9", "v10")
 kDelStr <- "*delete*"
+kOutputFilename <- "不正アクセスチェックレポート "
 # ------ Main processing ------
 source(here("programs", "common.R"), encoding="UTF-8")
 # Read vpn access log
@@ -201,11 +276,18 @@ if (anyNA(target_file_list)) {
 raw_log_list <- sapply(str_c(input_path, "/", target_file_list), ReadLog)
 # Get URL list
 address_list <- read.csv(str_c(ext_path, "/sinet.txt"), header=T, as.is=T)
+# Get Fortigate users
+fortigate_user_info <- filter(address_list, ID == "fortigate_id")$Item %>% read_sheet(sheet="SoftwareUsers", na="") %>%
+  filter(名称 == "FortiGate" & 削除日 == "NULL") %>% as.data.frame()
+fortigate_users <- fortigate_user_info[ ,"ユーザー名", drop=T]
 # Get PC information
 sinet_table <- filter(address_list, ID == "sinet")$Item %>% read_sheet()
 static_ip_table <- filter(address_list, ID == "static_ip")$Item %>% read_sheet()
-## Get DHCP list
+# Get DHCP list
 list_dhcp <- read.delim(str_c(ext_path, "/dhcp.txt"), header=F, as.is=T)
+# Get maintenance company information
+anet_ip_list <- filter(address_list, ID == "anet_ip_list")$Item %>% str_split(",") %>% unlist()
+maintenanceIpInfo <- GetMaintenanceIpInfo(static_ip_table, anet_ip_list)
 # Remove the space before the IP address
 for (i in 1:nrow(list_dhcp)){
   list_dhcp[i, 1] <- str_trim(list_dhcp[i, 1])
@@ -306,7 +388,7 @@ for (i in 1:length(temp_output_list)){
 write.csv(df_dhcp, str_c(output_path, "/dhcp.csv"))
 sinet_table <- sinet_table %>% select(-"ウィルス対策ソフトのバージョン")
 write.table(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="utf-8")
-saveWorkbook(output_wb, str_c(output_path, "/", utm_dir_name, ".xlsx"), overwrite=T)
+saveWorkbook(output_wb, str_c(output_path, "/", kOutputFilename, yyyymm, ".xlsx"), overwrite=T)
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
 rm(list = ls())
