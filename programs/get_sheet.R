@@ -1,7 +1,7 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2021/8/23 modified
+# 2021/8/30 modified
 # ------ library ------
 library("tidyverse")
 library("googlesheets4")

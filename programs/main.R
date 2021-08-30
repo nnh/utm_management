@@ -318,7 +318,11 @@ private_ip <- filter(static_ip_table, !is.na(ホスト名)) %>%
                   select(User="用途", Department="設置場所", Hostname="ホスト名", IP="IPアドレス", "MAC_Address",
                          "Duplicate") %>%
                     bind_rows(dynamic_ip)
-# Get Whitelist and Blacklist
+# Get Blacklist
+blacklist <- filter(address_list, ID == "excluded")$Item %>% read_sheet(sheet="blacklist")
+blacklist$Subnet_mask <- ""
+blacklist <- blacklist %>% select(IP, Subnet_mask, User=Description)
+# Get Whitelist
 raw_excluded <- read.csv(str_c(ext_path, "/excluded.csv"), as.is=T, na.strings="", fileEncoding="UTF-8")
 # IP list of network part
 excluded <- raw_excluded$IP %>%
@@ -326,6 +330,7 @@ excluded <- raw_excluded$IP %>%
                 data.frame(stringsAsFactors=F) %>%
                   cbind(raw_excluded$Description, stringsAsFactors=F)
 colnames(excluded) <- c("IP", "Subnet_mask", "User")
+excluded <- rbind(excluded, blacklist)
 temp_excluded <- excluded %>% filter(Subnet_mask != "")
 for (i in 1:nrow(temp_excluded)){
   output_bit_ip <- rep(0, 32)
