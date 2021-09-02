@@ -126,7 +126,7 @@ lineplot <- ggplot(df_plot, aes(x=yyyymm, y=bandwidth, color=application, group=
   geom_point() +
   labs(title=kTotalTitle, x="Target date", y="Bandwidth(GB)")
 temp_bandwidth <- "temp.html"
-output_bandwidth <- str_c("不正アクセスチェックレポート ", yyyymm, ".html")
+output_bandwidth <- str_c("bandwidth_", yyyymm, ".html")
 render(here("programs", "output_bandwidth_report.Rmd"),
        output_format=html_document(),
        output_dir=here(),
