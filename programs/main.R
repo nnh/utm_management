@@ -87,24 +87,24 @@ OutputWorkbook <- function(wb, sheetname, df, title){
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
            temp_df <- getLoginSummaryInfo(temp_df)
          },
-         # Bandwidth and Applications Report
+         # User Report
          "2"={
+           setColWidths(wb, i, cols = c(1, 2, 3, 4, 5), widths = c(90, 20, 20, 80))
+         },
+         # Bandwidth and Applications Report
+         "3"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
            delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Active Users###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # Client Reputation
-         "3"={
+         "4"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6), widths = c(30, 20, 20, 60, 30))
            delete_target_header <- c("###全ユーザー/デバイスのスコアサマリー###",
                                      "###全ユーザー/デバイスのインシデント数###",
                                      "###レピュテーションスコアの大きい上位デバイス###",
                                      "###直近2期間にスコアが増加した上位デバイス###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
-         },
-         # User Report
-         "4"={
-           setColWidths(wb, i, cols = c(1, 2, 3, 4, 5), widths = c(90, 20, 20, 80))
          }
   )
   writeData(wb, sheet=sheetname, x=title, withFilter=F, sep="\t")
@@ -246,9 +246,10 @@ getLoginSummaryInfo <- function(input_df){
 }
 # ------ Constant definition ------
 kTargetLog <- c("Admin and System Events Report",
+                "User Report without guest",
                 "Bandwidth and Applications Report without guest",
-                "Client Reputation without guest",
-                "User Report without guest")
+                "Client Reputation without guest")
+kOutputSummary <- "summary"
 kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
 kDhcp_header_mac <- c("IP", "v2", "MAC-Address", "Hostname", "v5", "v6", "v7", "VCI", "v9", "v10", "Expiry")
 kDhcp_header_win <- c("IP", "MAC-Address", "Hostname", "VCI", "Expiry", "v6", "v7", "v8", "v9", "v10")
@@ -393,6 +394,9 @@ for (i in 1:length(temp_output_list)){
 write.csv(df_dhcp, str_c(output_path, "/dhcp.csv"))
 sinet_table <- sinet_table %>% select(-"ウィルス対策ソフトのバージョン")
 write.table(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="utf-8")
+addWorksheet(output_wb, kOutputSummary)
+summaryoutput <- target_file_list %>% as.data.frame()
+writeData(output_wb, sheet=kOutputSummary, x=summaryoutput, colNames=F, rowNames=F)
 saveWorkbook(output_wb, str_c(output_path, "/", kOutputFilename, yyyymm, ".xlsx"), overwrite=T)
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
