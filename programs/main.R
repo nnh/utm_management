@@ -181,13 +181,13 @@ GetMaintenanceIpInfo <- function(static_ip_table, anet_ip_list){
     arrange(as.numeric(ip1), as.numeric(ip2), as.numeric(ip3), as.numeric(ip4))
   # VPN only connection from nmccrc
   dhcp_info <- dhcp_info %>% filter(ip1 == "192" | (ip1 == "172" & ip3 == 0))
-  dhcp_info$end <- NA
+  dhcp_info$end <- ''
   i <- 1
   while(i <= nrow(dhcp_info)){
     dhcp_info[i, "end"] <- dhcp_info[i + 1, "ip4"]
     i <- i + 2
   }
-  dhcp_info <- dhcp_info %>% filter(!is.na(end))
+  dhcp_info <- dhcp_info %>% filter(end != '')
   dc_maintenance_ip_range <- NULL
   for (i in 1:nrow(dhcp_info)){
     network <- str_c(dhcp_info[i, "ip1"], dhcp_info[i, "ip2"], dhcp_info[i, "ip3"], sep=".")
@@ -278,9 +278,8 @@ raw_log_list <- sapply(str_c(input_path, "/", target_file_list), ReadLog)
 # Get URL list
 address_list <- read.csv(str_c(ext_path, "/sinet.txt"), header=T, as.is=T)
 # Get Fortigate users
-fortigate_user_info <- filter(address_list, ID == "fortigate_id")$Item %>% read_sheet(sheet="SoftwareUsers", na="") %>%
-  filter(名称 == "FortiGate" & 削除日 == "NULL") %>% as.data.frame()
-fortigate_users <- fortigate_user_info[ ,"ユーザー名", drop=T]
+fortigate_user_info <- filter(address_list, ID == "fortigate_id")$Item %>% read_sheet(sheet="FortiGate", na="", col_names=T, skip=2) %>% as.data.frame()
+fortigate_users <- fortigate_user_info[ ,"User", drop=T]
 # Get PC information
 sinet_table <- filter(address_list, ID == "sinet")$Item %>% read_sheet()
 static_ip_table <- filter(address_list, ID == "static_ip")$Item %>% read_sheet()
