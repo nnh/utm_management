@@ -271,7 +271,7 @@ if (!exists("vpn_access_log")){
 file_list <- list.files(input_path)
 target_file_list <- sapply(kTargetLog, GetLogFullName, file_list)
 if (anyNA(target_file_list)) {
-  stop(str_c(kTargetLog[i], "をダウンロードして再実行してください"))
+  stop(str_c("必要なファイルをダウンロードして再実行してください"))
   target_file_list <- target_file_list[!is.na(target_file_list)]
 }
 raw_log_list <- sapply(str_c(input_path, "/", target_file_list), ReadLog)
