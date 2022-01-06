@@ -302,14 +302,17 @@ for (i in 1:length(temp_output_list)){
 write.csv(df_dhcp, str_c(output_path, "/dhcp.csv"))
 sinet_table <- sinet_table %>% select(-"ウィルス対策ソフトのバージョン")
 write.table(sinet_table, str_c(output_path, "/sinet_table.csv"), fileEncoding="utf-8")
-addWorksheet(output_wb, kOutputSummary)
-writeData(output_wb, sheet=kOutputSummary, x=checklist, colNames=F, rowNames=F)
-addStyle(output_wb, sheet=kOutputSummary, style=createStyle(wrapText=T), cols=4, rows=1:nrow(checklist))
-setColWidths(output_wb, sheet=kOutputSummary, cols=c(1:5), widths = c(15, 75, 50, 80, 10))
-pageSetup(output_wb, sheet=kOutputSummary, orientation="landscape", fitToWidth=T, fitToHeight=F)
 saveWorkbook(output_wb, str_c(output_path, "/", kOutputFilename, yyyymm, ".xlsx"), overwrite=T)
 # Delete all objects
 save(output_list, file=str_c(output_path, "/output_list.Rda"))
+# Output checklist workbook
+checklist_wb <- createWorkbook()
+addWorksheet(checklist_wb, kOutputSummary)
+writeData(checklist_wb, sheet=kOutputSummary, x=checklist, colNames=F, rowNames=F)
+addStyle(checklist_wb, sheet=kOutputSummary, style=createStyle(wrapText=T), cols=4, rows=1:nrow(checklist))
+setColWidths(checklist_wb, sheet=kOutputSummary, cols=c(1:5), widths = c(10, 75, 50, 80, 10))
+pageSetup(checklist_wb, sheet=kOutputSummary, orientation="landscape", fitToWidth=T, fitToHeight=F)
+saveWorkbook(checklist_wb, str_c(output_path, "/checklist.xlsx"), overwrite=T)
 rm(list = ls())
 # Output bandwidth report
 source(here("programs", "output_bandwidth_report.R"), encoding="UTF-8")

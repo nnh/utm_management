@@ -125,10 +125,10 @@ lineplot <- ggplot(df_plot, aes(x=yyyymm, y=bandwidth, color=application, group=
   geom_line() +
   geom_point() +
   labs(title=kTotalTitle, x="Target date", y="Bandwidth(GB)")
-temp_bandwidth <- "temp.html"
 output_bandwidth <- str_c("bandwidth_", yyyymm, ".html")
 render(here("programs", "output_bandwidth_report.Rmd"),
        output_format=html_document(),
        output_dir=here(),
-       output_file=temp_bandwidth)
-file.rename(here(temp_bandwidth), str_c(volume_str, "/Archives/Log/UTM/", output_bandwidth))
+       output_file=output_bandwidth)
+file.copy(here(output_bandwidth), str_c(volume_str, "/Archives/Log/UTM/"))
+file.remove(here(output_bandwidth))
