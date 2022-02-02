@@ -15,7 +15,8 @@ kTargetLog <- c("Admin and System Events Report",
                 "Bandwidth and Applications Report without guest",
                 "Client Reputation without guest")
 # ------ functions ------
-SetBlacklistInfo <- function(){
+SetBlacklistInfo <- function(config_filename){
+  raw_config <- config_filename %>% str_c(ext_path, '/', .) %>% read_file()
   kConfigEditHead <- '(?<=edit\\s"'
   kConfigEditFoot <- '"\\n)[\\s]+set\\suuid.*\\n[\\s]+set\\s'
   kConfigNext <- '(?=\\n[\\s]+next)'
@@ -103,7 +104,7 @@ if (length(raw_config) == 0){
   stop('configを所定の場所に格納して再実行してください')
 }
 if (!error_f){
-  black_address <- SetBlacklistInfo()
+  black_address <- SetBlacklistInfo(raw_config)
   if (!exists('black_address')){
     error_f <- T
     stop('error:SetBlacklistInfo')
@@ -146,15 +147,6 @@ gs4_auth(
   token = NULL)
 # Get URL list
 range_write(ss=filter(address_list, ID == "excluded")$Item, data=black_address, sheet='blacklist', range='A1', col_names=T)
-# Reduce the scope and reauthenticate.
-gs4_deauth()
-gs4_auth(
-  email = gargle::gargle_oauth_email(),
-  path = NULL,
-  scopes = "https://www.googleapis.com/auth/spreadsheets.readonly",
-  cache = gargle::gargle_oauth_cache(),
-  use_oob = gargle::gargle_oob_default(),
-  token = NULL)
 if (!error_f){
   # Get Fortigate users
   fortigate_user_info <- filter(address_list, ID == "fortigate_id")$Item %>% read_sheet(sheet="FortiGate", na="", col_names=T, skip=2) %>% as.data.frame()
