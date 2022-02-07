@@ -251,7 +251,8 @@ private_ip <- filter(static_ip_table, !is.na(ホスト名) & ホスト名 != 'DH
 # For identification of unregistered terminals.
 all_terminal <- private_ip
 no_hostname <- all_terminal %>% filter(!str_detect(IP, '192\\.168\\.1\\..*')) %>% filter(str_detect(IP, '^[192|172].*$')) %>% filter(is.na(Hostname)) %>% select(MAC_Address)
-unregistered_list <- left_join(no_hostname, df_dhcp, by=c("MAC_Address"="MAC-Address")) %>% filter(Hostname != '') %>% distinct(`MAC_Address`, .keep_all=T)
+df_dhcp_excluded_guest <- df_dhcp %>% filter(!str_detect(IP, '192\\.168\\.1\\..*'))
+unregistered_list <- left_join(no_hostname, df_dhcp_excluded_guest, by=c("MAC_Address"="MAC-Address")) %>% filter(Hostname != '') %>% distinct(`MAC_Address`, .keep_all=T)
 # IP list of network part
 excluded <- raw_excluded$IP %>%
               str_split_fixed(pattern="/", n=2) %>%
