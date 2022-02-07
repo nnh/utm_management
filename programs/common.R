@@ -20,7 +20,7 @@ if (os == "unix"){
 } else{
   volume_str <- "//aronas"
 }
-input_parent_path <- str_c(volume_str, "/Archives/ISR/SystemAssistant/月例・随時作業関連/UTMログ/レポート/")
+input_parent_path <- paste0(volume_str, "/Archives/ISR/SystemAssistant/月例・随時作業関連/UTMログ/レポート/")
 #target_yyyymm <- "201906"
 if (exists("target_yyyymm")){
   yyyymm <- target_yyyymm
@@ -29,15 +29,15 @@ if (exists("target_yyyymm")){
   yyyymm <- str_c(format(last_month, "%Y"), format(last_month, "%m"))
 }
 utm_dir_name <- str_c("UTM Logs ", yyyymm)
-parent_path <- str_c(input_parent_path, utm_dir_name)
-input_path <- str_c(parent_path, "/input")
-ext_path <- str_c(parent_path, "/ext")
-output_path <- str_c(parent_path, "/output")
+parent_path <- paste0(input_parent_path, utm_dir_name)
+input_path <- paste0(parent_path, "/input")
+ext_path <- paste0(parent_path, "/ext")
+output_path <- paste0(parent_path, "/output")
 if (file.exists(output_path) == F) {
   dir.create(output_path)
 }
 # vpn logs
-input_vpn_log_path <- str_c(volume_str, "/Archives/ISR/SystemAssistant/月例・随時作業関連/VPN・入退室ログ/VPN CardLogs ", yyyymm, ".xlsm")
+input_vpn_log_path <- paste0(volume_str, "/Archives/ISR/SystemAssistant/月例・随時作業関連/VPN・入退室ログ/VPN CardLogs ", yyyymm, ".xlsm")
 if (os == "unix"){
   input_vpn_log_path <- iconv(input_vpn_log_path, from="utf-8", to="utf-8")
 } else{

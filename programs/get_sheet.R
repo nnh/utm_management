@@ -1,7 +1,7 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2022/1/6 modified
+# 2022/2/4 modified
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
@@ -13,7 +13,10 @@ library(readxl)
 kTargetLog <- c("Admin and System Events Report",
                 "User Report without guest",
                 "Bandwidth and Applications Report without guest",
-                "Client Reputation without guest")
+                "Client Reputation without guest",
+                "List of terminals connected to DataCenter",
+                "List of terminals connected vpn",
+                "List of terminals connected to nmccrc")
 # ------ functions ------
 SetBlacklistInfo <- function(config_filename){
   raw_config <- config_filename %>% str_c(ext_path, '/', .) %>% read_file()
