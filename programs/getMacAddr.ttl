@@ -1,0 +1,67 @@
+; getMacAddr.ttl 
+; Tera Term macro to get MAC address information from L2 switch.
+; 2022/2/10 created 
+;
+:init
+  targetdir = 'C:\Users\marik\Desktop'
+  timeout = 3
+  UsernamePrompt = 'Username:'
+  PasswordPrompt = 'Password:'
+  inputbox 'input username' 'inputbox'
+  user = inputstr
+  passwordbox 'password:' 'input'
+  password = inputstr
+  changedir targetdir
+:main
+  fileopen fh 'targetIp.txt' 0
+
+:loop
+  filereadln fh target
+  if result goto breakloop
+  
+  strsplit target '_'
+  targetip = groupmatchstr1
+  terminalname = groupmatchstr2
+  waitstr1 = terminalname
+  strconcat waitstr1 '#'
+  
+  connectinfo = targetip
+
+  ; *** Connect via telnet. ***
+  strconcat connectinfo ':23 /nossh /T=1'
+  logfilename = target
+  strconcat logfilename '.txt'
+  logopen logfilename 0 0
+  connect connectinfo
+  wait UsernamePrompt
+  sendln user
+  wait PasswordPrompt
+  sendln password
+  wait waitstr1
+
+  ; *** Output mac-address. ***
+  sendln 'show mac-address'
+  pause 3
+  for i 1 100
+    waitregex '^.*MORE.*$'
+    if result == 1 then
+      send ' '
+      pause 3
+    else
+;      send $03
+      break
+    endif
+  next
+  ; *** Disconnect. ***
+  wait waitstr1
+  sendln 'logout'
+  wait waitstr1
+  sendln 'y'
+  logclose
+  pause 3
+
+  goto loop
+  
+:breakloop
+  fileclose fh
+  closett
