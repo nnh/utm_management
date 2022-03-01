@@ -93,6 +93,21 @@ OutputWorkbook <- function(wb, sheetname, df, title){
                                      "###レピュテーションスコアの大きい上位デバイス###",
                                      "###直近2期間にスコアが増加した上位デバイス###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
+         },
+         # List of terminals connected to the DataCenter
+         "5"={
+           setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
+           temp_df <- output_list[[i]]
+         },
+         # List of terminals connected to the vpn
+         "6"={
+           setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
+           temp_df <- output_list[[i]]
+         },
+         # List of terminals connected to the nmccrc
+         "7"={
+           setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
+           temp_df <- output_list[[i]]
          }
   )
   writeData(wb, sheet=sheetname, x=title, withFilter=F, sep="\t")
@@ -228,11 +243,16 @@ df_dhcp$lower_hostname <- iconv(df_dhcp$Hostname, "utf-8", "cp932") %>% tolower(
 dynamic_ip <- right_join(sinet_table, df_dhcp, by="lower_hostname") %>%
                 select(User="使用者名", Department="部署名", Hostname="Hostname.x", "IP", MAC_Address="MAC-Address", "Duplicate")
 # Get Static IP list
-private_ip <- filter(static_ip_table, !is.na(ホスト名)) %>%
+private_ip <- filter(static_ip_table, !is.na(ホスト名) & ホスト名 != 'DHCP Start' & ホスト名 != 'DHCP End') %>%
                 mutate(MAC_Address="", Duplicate=F) %>%
                   select(User="用途", Department="設置場所", Hostname="ホスト名", IP="IPアドレス", "MAC_Address",
                          "Duplicate") %>%
                     bind_rows(dynamic_ip)
+# For identification of unregistered terminals.
+all_terminal <- private_ip
+no_hostname <- all_terminal %>% filter(!str_detect(IP, '192\\.168\\.1\\..*')) %>% filter(str_detect(IP, '^[192|172].*$')) %>% filter(is.na(Hostname)) %>% select(MAC_Address)
+df_dhcp_excluded_guest <- df_dhcp %>% filter(!str_detect(IP, '192\\.168\\.1\\..*'))
+unregistered_list <- left_join(no_hostname, df_dhcp_excluded_guest, by=c("MAC_Address"="MAC-Address")) %>% filter(Hostname != '') %>% distinct(`MAC_Address`, .keep_all=T)
 # IP list of network part
 excluded <- raw_excluded$IP %>%
               str_split_fixed(pattern="/", n=2) %>%
@@ -313,6 +333,8 @@ addStyle(checklist_wb, sheet=kOutputSummary, style=createStyle(wrapText=T), cols
 setColWidths(checklist_wb, sheet=kOutputSummary, cols=c(1:5), widths = c(10, 75, 50, 80, 10))
 pageSetup(checklist_wb, sheet=kOutputSummary, orientation="landscape", fitToWidth=T, fitToHeight=F)
 saveWorkbook(checklist_wb, str_c(output_path, "/checklist.xlsx"), overwrite=T)
+# Output list of unregistered terminals.
+write.csv(unregistered_list, str_c(output_path, "/unregistered.csv"))
 rm(list = ls())
 # Output bandwidth report
 source(here("programs", "output_bandwidth_report.R"), encoding="UTF-8")
