@@ -49,7 +49,7 @@ AddUserInfo <- function(raw_log, ip_list){
         }
       }
       if (nrow(temp_ip_row) == 1){
-        output_file[i] <- str_c(output_file[i], "," ,temp_ip_row$Hostname, ",", temp_ip_row$User, "," ,temp_ip_row$Department)
+        output_file[i] <- str_c(output_file[i], "," ,temp_ip_row$Hostname, ",", temp_ip_row$User, "," ,temp_ip_row$Department, "," , temp_ip_row$MAC_Address)
       } else if (nrow(temp_ip_row) > 1){
         # Duplicate host name
         output_file[i] <- str_c(output_file[i], "," ,temp_ip_row[1, "Hostname"], "（ホスト名重複・要確認）")
@@ -241,7 +241,15 @@ sinet_table$Duplicate <- ifelse(sinet_table$Hostname %in% duplicate_hostname, T,
 sinet_table$lower_hostname <- tolower(sinet_table$Hostname)
 df_dhcp$lower_hostname <- iconv(df_dhcp$Hostname, "utf-8", "cp932") %>% tolower()
 dynamic_ip <- right_join(sinet_table, df_dhcp, by="lower_hostname") %>%
-                select(User="使用者名", Department="部署名", Hostname="Hostname.x", "IP", MAC_Address="MAC-Address", "Duplicate")
+                select(User="使用者名", Department="部署名", Hostname="Hostname.x", "IP", MAC_Address="MAC-Address", "Duplicate", Hostname_y="Hostname.y")
+# If the terminal is SINET unregistered, output the hostname in the DHCP log.
+for (i in 1:nrow(dynamic_ip)){
+  if (is.na(dynamic_ip[i, "Hostname"])){
+    dynamic_ip[i, "Hostname"] <- ifelse(dynamic_ip[i, "Hostname_y"] != "", dynamic_ip[i, "Hostname_y"], "! 端末名不明")
+    dynamic_ip[i, "User"] <- "! SINET未登録端末"
+  }
+}
+dynamic_ip <- dynamic_ip %>% select(-Hostname_y)
 # Get Static IP list
 private_ip <- filter(static_ip_table, !is.na(ホスト名) & ホスト名 != 'DHCP Start' & ホスト名 != 'DHCP End') %>%
                 mutate(MAC_Address="", Duplicate=F) %>%
