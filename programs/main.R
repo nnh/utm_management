@@ -82,7 +82,7 @@ OutputWorkbook <- function(wb, sheetname, df, title){
          # Bandwidth and Applications Report
          "3"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
-           delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Active Users###")
+           delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Active Users###", "###Top 30 Users by Bandwidth and Sessions###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # Client Reputation
