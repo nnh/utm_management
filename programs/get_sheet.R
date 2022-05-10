@@ -1,7 +1,7 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2022/2/8 modified
+# 2022/5/10 modified
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
@@ -9,14 +9,6 @@ library(here)
 library(googlesheets4)
 library(openxlsx)
 library(readxl)
-# ------ constants ------
-kTargetLog <- c("Admin and System Events Report",
-                "User Report without guest",
-                "Bandwidth and Applications Report without guest",
-                "Client Reputation without guest",
-                "List of terminals connected to DataCenter",
-                "List of terminals connected vpn",
-                "List of terminals connected to nmccrc")
 # ------ functions ------
 SetBlacklistInfo <- function(config_filename){
   raw_config <- config_filename %>% str_c(ext_path, '/', .) %>% read_file()
@@ -36,28 +28,6 @@ SetBlacklistInfo <- function(config_filename){
   # Delete addresses that are not registered in the group.
   black_address <- tibble(IP, Description) %>% filter(Description %in% black_addresslist)
   return(black_address)
-}
-GetVpnLog <- function(){
-  # Read vpn access log
-  vpn_access_log <- read_excel(input_vpn_log_path, sheet="connected_from") %>% filter(!is.na(ユーザー)) %>%
-    select(IP=接続元IPアドレス, User=ユーザー) %>% distinct_all()
-  vpn_access_log$Duplicate <- "FALSE"
-  vpn_access_log$Department <- ""
-  vpn_access_log$Hostname <- ""
-  vpn_access_log$MAC_Address <- ""
-  return(vpn_access_log)
-}
-#' @title GetLogFullName
-#' @param target target file name
-#' @param file_list file list
-#' @return Full name of target file
-GetLogFullName <- function(target, file_list){
-  temp_idx <- str_which(file_list, target)
-  if (length(temp_idx) > 0){
-    return(file_list[temp_idx])
-  } else {
-    return(NA)
-  }
 }
 #' @title GetMaintenanceIpInfo
 #' @param static_ip_table a data frame
@@ -122,14 +92,10 @@ if (!error_f){
 }
 if (!error_f){
   # Read utm log
-  file_list <- list.files(input_path)
-  target_file_list <- sapply(kTargetLog, GetLogFullName, file_list)
-  if (anyNA(target_file_list)) {
+  raw_log_list <- ReadUtmLogs(input_path, kTargetLog)
+  if (!exists("raw_log_list")){
     error_f <- T
-    stop(str_c("必要なファイルをダウンロードして再実行してください"))
-    target_file_list <- target_file_list[!is.na(target_file_list)]
   }
-  raw_log_list <- sapply(str_c(input_path, "/", target_file_list), ReadLog)
 }
 # Get DHCP list
 if (!error_f){
@@ -198,11 +164,10 @@ if (!error_f){
   }
 }
 if (!error_f){
-  # Get Whitelist
-  raw_excluded <- read.csv(str_c(ext_path, "/excluded.csv"), as.is=T, na.strings="", fileEncoding="UTF-8")
-  if (!exists("raw_excluded")){
+  whois_csv <- GetWhoisCsv()
+  if (!exists("whois_csv")){
     error_f <- T
-    stop('error:Get Whitelist')
+    stop('error:Get whois_csv')
   }
 }
 if (!error_f){
