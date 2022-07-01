@@ -99,8 +99,7 @@ if (os == "unix"){
 } else{
   volume_str <- "//aronas"
 }
-#input_parent_path <- paste0(volume_str, "/Archives/ISR/SystemAssistant/monthlyOperations/unauthorizedAccessLogs/")
-input_parent_path <- "/Users/mariko/Library/CloudStorage/Box-Box/Datacenter/ISR/vpn_utm_log/UTM/unauthorizedAccessLogs/"
+input_parent_path <- paste0(volume_str, "/Archives/ISR/SystemAssistant/monthlyOperations/unauthorizedAccessLogs/")
 #target_yyyymm <- "201906"
 if (exists("target_yyyymm")){
   yyyymm <- target_yyyymm
@@ -117,8 +116,7 @@ if (file.exists(output_path) == F) {
   dir.create(output_path)
 }
 # vpn logs
-#input_vpn_log_path <- paste0(volume_str, "/Archives/ISR/SystemAssistant/monthlyOperations/vpnAndRoomAccessLogs/VPN CardLogs ", yyyymm, ".xlsm")
-input_vpn_log_path <- paste0("/Users/mariko/Library/CloudStorage/Box-Box/Datacenter/ISR/vpn_utm_log/VPN/VPN CardLogs ", yyyymm, ".xlsm")
+input_vpn_log_path <- paste0(volume_str, "/Archives/ISR/SystemAssistant/monthlyOperations/vpnAndRoomAccessLogs/VPN CardLogs ", yyyymm, ".xlsm")
 if (os == "unix"){
   input_vpn_log_path <- iconv(input_vpn_log_path, from="utf-8", to="utf-8")
 } else{
