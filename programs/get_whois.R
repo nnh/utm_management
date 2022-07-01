@@ -26,7 +26,7 @@ getTargetList <- function(input, targetStr){
   return(temp)
 }
 GetWhoisInfoByServer <- function(hostname, server='whois.nic.ad.jp'){
-  Sys.sleep(3)
+  Sys.sleep(10)
   conn <- make.socket(server, 43)
   write.socket(conn, hostname)
   write.socket(conn, "\r\n")
