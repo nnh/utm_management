@@ -1,7 +1,7 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2022/5/10 modified
+# 2022/7/1 modified
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
@@ -24,7 +24,8 @@ SetBlacklistInfo <- function(config_filename){
   temp <- black_ip_range[[1]] %>% str_extract_all('^.*Black[\\s|\\S]*', simplify=T)
   temp <- temp[which(nchar(temp) > 0)]
   Description <- temp %>% str_extract('Black[0-9|-].*(?=\\")')
-  IP <- temp %>% str_extract('(?<=set\\ssubnet\\s)[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+')
+#  IP <- temp %>% str_extract('(?<=set\\ssubnet\\s)[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+')
+  IP <- temp %>% str_extract('(?<=set\\ssubnet\\s)[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+|(?<=set\\sfqdn\\s\").*(?=\")')
   # Delete addresses that are not registered in the group.
   black_address <- tibble(IP, Description) %>% filter(Description %in% black_addresslist)
   return(black_address)
