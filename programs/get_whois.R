@@ -54,26 +54,13 @@ source(here("programs", "common.R"), encoding="UTF-8")
 whois_csv <- GetWhoisCsv()
 # read utm logs
 utm_log_raw <- ReadUtmLogs(input_path, kTargetLog)
-domain_list <- getTargetList(utm_log_raw, kDomainRegex) %>% unique() %>% str_remove_all('\"')
-# Obtaining an IP address from a domain name.
-domainAndIp <- domain_list %>% map( ~ {
-  ip <- NA
-  tryCatch({
-    ip <- nslookup(.)
-  }, error = function(e){ ip <- NA })
-  return (c(., ip))
-})
-# list -> dataframe
-df_domainAndIp <- reduce(domainAndIp, rbind) %>% data.frame()
-colnames(df_domainAndIp) <- kPublicIPColNames
-df_domainAndIp <- df_domainAndIp %>% filter(!is.na(ip))
 # ipv4
 ip_address_list <- getTargetList(utm_log_raw, kIpRegex)
 public_ip_list <- ip_address_list %>% str_remove(kPrivateIpRange_1) %>% str_remove(kPrivateIpRange_2) %>% str_remove(kLoopbackIp)
 public_ip_list <- public_ip_list[-which(public_ip_list == '')] %>% unique()
 df_public_ip <- data.frame(NA, public_ip_list)
 colnames(df_public_ip) <- kPublicIPColNames
-target_public_list <- bind_rows(df_domainAndIp, df_public_ip)
+target_public_list <- df_public_ip
 # vpn接続情報と突き合わせ
 vpn_access_log <- GetVpnLog()
 temp <- left_join(target_public_list, vpn_access_log, by=c('ip'='IP'))

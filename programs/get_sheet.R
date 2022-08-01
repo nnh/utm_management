@@ -1,7 +1,7 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2022/7/1 modified
+# 2022/8/1 modified
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
