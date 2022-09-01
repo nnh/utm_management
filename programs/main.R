@@ -8,48 +8,32 @@ InputStr <- function(obj_name, str_prompt){
   temp <- readline(prompt=str_prompt)
   assign(obj_name, temp, env=.GlobalEnv)
 }
-#' @title IntToBitVect
-#' @param x Decimal number or string
-#' @return Vector of values converted to binary (8bit)
-IntToBitVect <- function(x){
-  temp <- rev(as.numeric(intToBits(x))[1:8])
-  return(temp)
-}
-#' @title BitVectToInt
-#' @param x Vector of 0 or 1 values
-#' @return Integer
-BitVectToInt<-function(x) {
-  temp <- packBits(rev(c(rep(F, 32 - length(x) %% 32), as.logical(x))), "integer")
-  return(temp)
-}
 #' @title AddUserInfo
 #' @param raw_log log
 #' @param ip_list private IP lists, whitelists and blacklists
+#' @param whois_csv
 #' @return List of logs
-AddUserInfo <- function(raw_log, ip_list){
+AddUserInfo <- function(raw_log, ip_list, whois_csv){
   output_file <- raw_log %>% str_replace_all(pattern="(?<=[0-9]),(?=[0-9])", replacement="") %>%  # Remove commas for digits
                    gsub(pattern="\"", replacement="", x=., fixed=T) %>%
                      str_replace_all(pattern='^"|"$', replacement="")  # Remove double quotes at the beginning and end of sentence
-  partial_ip_list <- ip_list %>% filter(!(str_detect(ip_list$IP, pattern=kIpAddr)))
+  kIpDomainRegex <- str_c(kIpRegex, str_remove_all(kDomainRegex, '\"'), sep="|")
   for (i in 1:length(output_file)){
     # Determine if an IP address is included
-    temp_row <- unlist(strsplit(output_file[i], ",")) %>% str_extract(kIpAddr)
+    temp_row <- unlist(strsplit(output_file[i], ",")) %>% str_extract(kIpDomainRegex)
     # Remove duplicate columns
     temp_ip <- temp_row[!is.na(temp_row)] %>% unique
     # If the IP address is included, get the hostname and department
     if (!(identical(temp_ip, character(0)))){
-      temp_ip_row <- ip_list %>% filter(IP==temp_ip)
-      # Partial match
-      if (nrow(temp_ip_row) == 0){
-        for (j in 1:nrow(partial_ip_list)){
-          if (str_detect(temp_ip, pattern=str_c("^", partial_ip_list[j, "IP"], "\\..*$"))){
-            temp_ip_row <- partial_ip_list[j, ]
-            break()
-          }
-        }
+      temp_ip_row <- whois_csv %>% filter(ip==temp_ip)
+      if (nrow(temp_ip_row) != 1){
+        temp_ip_row <- whois_csv %>% filter(domain==temp_ip)
+      }
+      if (nrow(temp_ip_row) != 1){
+        temp_ip_row <- ip_list %>% filter(IP==temp_ip)
       }
       if (nrow(temp_ip_row) == 1){
-        output_file[i] <- str_c(output_file[i], "," ,temp_ip_row$Hostname, ",", temp_ip_row$User, "," ,temp_ip_row$Department)
+        output_file[i] <- str_c(output_file[i], "," ,temp_ip_row$Hostname, ",", temp_ip_row$User, "," ,temp_ip_row$Department, "," , temp_ip_row$MAC_Address)
       } else if (nrow(temp_ip_row) > 1){
         # Duplicate host name
         output_file[i] <- str_c(output_file[i], "," ,temp_ip_row[1, "Hostname"], "（ホスト名重複・要確認）")
@@ -82,7 +66,7 @@ OutputWorkbook <- function(wb, sheetname, df, title){
          # Bandwidth and Applications Report
          "3"={
            setColWidths(wb, i, cols = c(2, 3, 4, 5, 6, 7), widths = c(25, 20, 15, 20, 80, 40))
-           delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Active Users###")
+           delete_target_header <- c("###Bandwidth Summary###", "###Sessions Summary###", "###Active Users###", "###Top 30 Users by Bandwidth and Sessions###")
            temp_df <- DeleteRows(output_list[[i]], delete_target_header)
          },
          # Client Reputation
@@ -241,7 +225,15 @@ sinet_table$Duplicate <- ifelse(sinet_table$Hostname %in% duplicate_hostname, T,
 sinet_table$lower_hostname <- tolower(sinet_table$Hostname)
 df_dhcp$lower_hostname <- iconv(df_dhcp$Hostname, "utf-8", "cp932") %>% tolower()
 dynamic_ip <- right_join(sinet_table, df_dhcp, by="lower_hostname") %>%
-                select(User="使用者名", Department="部署名", Hostname="Hostname.x", "IP", MAC_Address="MAC-Address", "Duplicate")
+                select(User="使用者名", Department="部署名", Hostname="Hostname.x", "IP", MAC_Address="MAC-Address", "Duplicate", Hostname_y="Hostname.y")
+# If the terminal is SINET unregistered, output the hostname in the DHCP log.
+for (i in 1:nrow(dynamic_ip)){
+  if (is.na(dynamic_ip[i, "Hostname"])){
+    dynamic_ip[i, "Hostname"] <- ifelse(dynamic_ip[i, "Hostname_y"] != "", dynamic_ip[i, "Hostname_y"], "! 端末名不明")
+    dynamic_ip[i, "User"] <- "! SINET未登録端末"
+  }
+}
+dynamic_ip <- dynamic_ip %>% select(-Hostname_y)
 # Get Static IP list
 private_ip <- filter(static_ip_table, !is.na(ホスト名) & ホスト名 != 'DHCP Start' & ホスト名 != 'DHCP End') %>%
                 mutate(MAC_Address="", Duplicate=F) %>%
@@ -253,49 +245,7 @@ all_terminal <- private_ip
 no_hostname <- all_terminal %>% filter(!str_detect(IP, '192\\.168\\.1\\..*')) %>% filter(str_detect(IP, '^[192|172].*$')) %>% filter(is.na(Hostname)) %>% select(MAC_Address)
 df_dhcp_excluded_guest <- df_dhcp %>% filter(!str_detect(IP, '192\\.168\\.1\\..*'))
 unregistered_list <- left_join(no_hostname, df_dhcp_excluded_guest, by=c("MAC_Address"="MAC-Address")) %>% filter(Hostname != '') %>% distinct(`MAC_Address`, .keep_all=T)
-# IP list of network part
-excluded <- raw_excluded$IP %>%
-              str_split_fixed(pattern="/", n=2) %>%
-                data.frame(stringsAsFactors=F) %>%
-                  cbind(raw_excluded$Description, stringsAsFactors=F)
-colnames(excluded) <- c("IP", "Subnet_mask", "User")
-excluded <- rbind(excluded, blacklist)
-temp_excluded <- excluded %>% filter(Subnet_mask != "")
-for (i in 1:nrow(temp_excluded)){
-  output_bit_ip <- rep(0, 32)
-  # Convert IP address to bit
-  bit_ip <- temp_excluded[i, "IP"] %>%
-              str_split(pattern="\\." ) %>%
-                unlist %>%
-                  lapply(IntToBitVect) %>%
-                    unlist
-  num_subnet_mask <- as.numeric(temp_excluded[i, "Subnet_mask"])
-  temp_host <- 8 - (num_subnet_mask %% 8)
-  # Get IP address within network part range
-  if (temp_host > 0 && temp_host < 8){
-    target_octet <- (num_subnet_mask %/% 8) + 1
-    temp_end_bit <- target_octet * 8
-    temp_start_bit <- temp_end_bit - 7
-    temp_bin <- bit_ip[temp_start_bit:num_subnet_mask, drop=F]
-    if (sum(temp_bin) == 0){
-      temp_min <- BitVectToInt(1)
-    } else {
-      temp_min <- c(temp_bin, rep(0, temp_host)) %>% BitVectToInt
-    }
-    temp_max <- c(temp_bin, rep(1, temp_host)) %>% BitVectToInt
-    for (j in temp_min:temp_max){
-      output_bit_ip[1:temp_end_bit] <- c(bit_ip[1:(temp_start_bit - 1)], IntToBitVect(j))
-      if (temp_end_bit < 32) {
-        output_bit_ip[(temp_end_bit + 1):32] <- bit_ip[(temp_end_bit + 1):32]
-      }
-      temp_ip <- str_c(BitVectToInt(output_bit_ip[1:8]), ".",
-                         BitVectToInt(output_bit_ip[9:16]), ".",
-                         BitVectToInt(output_bit_ip[17:24]), ".",
-                         BitVectToInt(output_bit_ip[25:32]))
-      excluded <- rbind(excluded, c(temp_ip, "", temp_excluded[i, "User"]))
-    }
-  }
-}
+excluded <- blacklist
 # Delete '.0' in 'x.x.x.0'
 excluded$IP <- str_replace_all(excluded$IP, pattern="(\\.0)*\\.0$", replacement="")
 # Combine private IP lists with whitelists and blacklists
@@ -303,12 +253,11 @@ ip_list <- excluded %>%
              mutate(Department="", Hostname="", MAC_Address="", Duplicate=F) %>%
                select(User, Department, Hostname, IP, MAC_Address, Duplicate) %>%
                  bind_rows(private_ip)
-# NA -> ""
-ip_list[is.na(ip_list)] <- ""
 # Conbine vpn access log
-ip_list <- bind_rows(vpn_access_log, ip_list)
+ip_list <- rbind(vpn_access_log, ip_list)
+ip_list[is.na(ip_list)] <- ""
 # Add information such as hostname to the log
-temp_output_list <- sapply(raw_log_list, AddUserInfo, ip_list)
+temp_output_list <- sapply(raw_log_list, AddUserInfo, ip_list, whois_csv)
 # output logs
 output_csv_names <- names(temp_output_list) %>% str_extract(pattern="[^\\/]*$")
 # convert from vector to dataframe

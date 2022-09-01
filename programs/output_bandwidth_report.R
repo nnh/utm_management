@@ -131,4 +131,5 @@ render(here("programs", "output_bandwidth_report.Rmd"),
        output_dir=here(),
        output_file=output_bandwidth)
 file.copy(here(output_bandwidth), str_c(volume_str, "/Archives/Log/UTM/"))
+
 file.remove(here(output_bandwidth))
