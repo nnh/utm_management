@@ -1,9 +1,14 @@
 ; getMacAddr.ttl 
 ; Tera Term macro to get MAC address information from L2 switch.
 ; 2022/2/10 created 
+; 2022/9/27 fixed
 ;
 :init
-  targetdir = 'C:\Users\marik\Desktop'
+  getenv 'USERPROFILE' userprofile
+  targetdir = userprofile
+  strconcat targetdir '\Desktop'
+  inputfilepath = targetdir
+  strconcat inputfilepath '\targetIp.txt'
   timeout = 3
   UsernamePrompt = 'Username:'
   PasswordPrompt = 'Password:'
@@ -13,7 +18,7 @@
   password = inputstr
   changedir targetdir
 :main
-  fileopen fh 'targetIp.txt' 0
+  fileopen fh inputfilepath 0
 
 :loop
   filereadln fh target
