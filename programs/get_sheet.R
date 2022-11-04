@@ -1,7 +1,7 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2022/8/1 modified
+# 2022/11/4 modified
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
@@ -67,7 +67,13 @@ GetMaintenanceIpInfo <- function(static_ip_table, anet_ip_list){
   maintenance_ip_range <- c(dc_maintenance_ip_range, anet_maintenance_ip_range, "127.0.0.1")
   return(maintenance_ip_range)
 }
-
+#' @title readDhcpTxt
+#' @param dhcpFileEncoding File Encoding String
+#' @param dhcpFileName The file name
+#' @return a data frame
+readDhcpTxt <- function(dhcpFileEncoding, dhcpFileName){
+  return (read.delim(str_c(ext_path, dhcpFileName), header=F, as.is=T, fileEncoding=dhcpFileEncoding))
+}
 # ------ main ------
 source(here("programs", "common.R"), encoding="UTF-8")
 address_list <- read.csv(str_c(ext_path, "/sinet.txt"), header=T, as.is=T)
@@ -100,10 +106,25 @@ if (!error_f){
 }
 # Get DHCP list
 if (!error_f){
-  list_dhcp <- read.delim(str_c(ext_path, "/dhcp.txt"), header=F, as.is=T)
+  dhcpFileName <- 'dhcp.txt'
+  dhcpFileEncoding <- 'utf-8'
+  tryCatch(
+    expr = {
+      list_dhcp <- readDhcpTxt(dhcpFileEncoding, dhcpFileName)
+    },
+    warning = function(e) {
+      dhcpFileEncoding <<- 'utf-16'
+      list_dhcp <<- readDhcpTxt(dhcpFileEncoding, dhcpFileName)
+    }
+  )
   if (!exists("list_dhcp")){
     error_f <- T
     stop('error:Get dhcp.txt')
+  }
+  for (i in 1:nrow(list_dhcp)){
+    if (str_detect(list_dhcp[i, 1], '\\s*192|172') && list_dhcp[i, 4] == ''){
+      list_dhcp[i, 4] <- 'DHCPログのホスト名が空白のため詳細確認不可能'
+    }
   }
 }
 
