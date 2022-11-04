@@ -121,6 +121,11 @@ if (!error_f){
     error_f <- T
     stop('error:Get dhcp.txt')
   }
+  for (i in 1:nrow(list_dhcp)){
+    if (str_detect(list_dhcp[i, 1], '\\s*192|172') && list_dhcp[i, 4] == ''){
+      list_dhcp[i, 4] <- 'DHCPログのホスト名が空白のため詳細確認不可能'
+    }
+  }
 }
 
 # google authentication
