@@ -223,14 +223,16 @@ duplicate_hostname <- sinet_table %>%
                                 unlist
 sinet_table$Duplicate <- ifelse(sinet_table$Hostname %in% duplicate_hostname, T, F)
 sinet_table$lower_hostname <- tolower(sinet_table$Hostname)
-df_dhcp$lower_hostname <- iconv(df_dhcp$Hostname, "utf-8", "cp932") %>% tolower()
+df_dhcp$lower_hostname <- iconv(df_dhcp$Hostname, dhcpFileEncoding, "cp932") %>% tolower()
 dynamic_ip <- right_join(sinet_table, df_dhcp, by="lower_hostname") %>%
                 select(User="使用者名", Department="部署名", Hostname="Hostname.x", "IP", MAC_Address="MAC-Address", "Duplicate", Hostname_y="Hostname.y")
 # If the terminal is SINET unregistered, output the hostname in the DHCP log.
 for (i in 1:nrow(dynamic_ip)){
   if (is.na(dynamic_ip[i, "Hostname"])){
+    dynamic_ip[i, "User"] <- ifelse(dynamic_ip[i, "Hostname_y"] == dhcpBlankHostname, "DHCPログのホスト名が空白のため詳細確認不可能", NA)
+    dynamic_ip[i, "Hostname_y"] <- ifelse(dynamic_ip[i, "Hostname_y"] != dhcpBlankHostname, dynamic_ip[i, "Hostname_y"], "")
     dynamic_ip[i, "Hostname"] <- ifelse(dynamic_ip[i, "Hostname_y"] != "", dynamic_ip[i, "Hostname_y"], "! 端末名不明")
-    dynamic_ip[i, "User"] <- "! SINET未登録端末"
+    dynamic_ip[i, "User"] <- ifelse(is.na(dynamic_ip[i, "User"]), "! SINET未登録端末", dynamic_ip[i, "User"])
   }
 }
 dynamic_ip <- dynamic_ip %>% select(-Hostname_y)

@@ -1,7 +1,7 @@
 # Format UTM log
 # Mariko Ohtsuka
 # 2019/10/2 created
-# 2022/11/4 modified
+# 2022/11/25 modified
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
@@ -72,7 +72,7 @@ GetMaintenanceIpInfo <- function(static_ip_table, anet_ip_list){
 #' @param dhcpFileName The file name
 #' @return a data frame
 readDhcpTxt <- function(dhcpFileEncoding, dhcpFileName){
-  return (read.delim(str_c(ext_path, dhcpFileName), header=F, as.is=T, fileEncoding=dhcpFileEncoding))
+  return (read.delim(str_c(ext_path, '/', dhcpFileName), header=F, as.is=T, fileEncoding=dhcpFileEncoding))
 }
 # ------ main ------
 source(here("programs", "common.R"), encoding="UTF-8")
@@ -108,6 +108,7 @@ if (!error_f){
 if (!error_f){
   dhcpFileName <- 'dhcp.txt'
   dhcpFileEncoding <- 'utf-8'
+  dhcpBlankHostname <- '!blank_hostname'
   tryCatch(
     expr = {
       list_dhcp <- readDhcpTxt(dhcpFileEncoding, dhcpFileName)
@@ -123,7 +124,7 @@ if (!error_f){
   }
   for (i in 1:nrow(list_dhcp)){
     if (str_detect(list_dhcp[i, 1], '\\s*192|172') && list_dhcp[i, 4] == ''){
-      list_dhcp[i, 4] <- 'DHCPログのホスト名が空白のため詳細確認不可能'
+      list_dhcp[i, 4] <- dhcpBlankHostname
     }
   }
 }
