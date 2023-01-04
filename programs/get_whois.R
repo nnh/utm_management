@@ -121,7 +121,7 @@ jp_whois_info <- output_whois_jp %>% map( ~ {
 }) %>% reduce(rbind) %>% data.frame()
 colnames(jp_whois_info) <- c('ip', 'orgname', 'country', 'domain')
 jp_whois_info <- jp_whois_info %>% filter(!is.na(orgname))
-output_jp <- jp_whois_info %>% bind_rows(anti_join(whois_jp, jp_whois_info, by='ip'))
+output_jp <- whois_jp#jp_whois_info %>% bind_rows(anti_join(whois_jp, jp_whois_info, by='ip'))
 temp <- bind_rows(output_jp, whois_not_jp)
 temp_whois <- data.frame(ip=unlist(temp$ip), User=unlist(temp$orgname), domain=unlist(temp$domain))
 template_whois <- whois_csv %>% bind_rows(temp_whois)
