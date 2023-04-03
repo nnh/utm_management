@@ -223,7 +223,8 @@ duplicate_hostname <- sinet_table %>%
                                 unlist
 sinet_table$Duplicate <- ifelse(sinet_table$Hostname %in% duplicate_hostname, T, F)
 sinet_table$lower_hostname <- tolower(sinet_table$Hostname)
-df_dhcp$lower_hostname <- iconv(df_dhcp$Hostname, dhcpFileEncoding, "cp932") %>% tolower()
+#df_dhcp$lower_hostname <- iconv(df_dhcp$Hostname, dhcpFileEncoding, "cp932") %>% tolower()
+df_dhcp$lower_hostname <- df_dhcp$Hostname %>% tolower()
 dynamic_ip <- right_join(sinet_table, df_dhcp, by="lower_hostname") %>%
                 select(User="使用者名", Department="部署名", Hostname="Hostname.x", "IP", MAC_Address="MAC-Address", "Duplicate", Hostname_y="Hostname.y")
 # If the terminal is SINET unregistered, output the hostname in the DHCP log.
