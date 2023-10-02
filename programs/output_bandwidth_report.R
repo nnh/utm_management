@@ -13,7 +13,7 @@ kTotalTitle = "Total Bytes Transferred"
 #' @param columnNames Target column name
 #' @return A data frame
 getTargetRows <- function(inputCsv, targetTitle, rowCount, columnNames){
-  checkTitle <- map_chr(inputCsv, function(x){ str_detect(x, targetTitle) })
+  checkTitle <- map_chr(inputCsv, ~ as.character(str_detect(., targetTitle)))
   titleRow <- which(checkTitle == TRUE)
   targetStartRow <- titleRow + 2
   targetEndRow <- titleRow + rowCount + 1
@@ -37,14 +37,15 @@ getInputCsv <- function(targetFilePath, yyyymm){
                            "###Traffic Statistics###",
                            8,
                            c("ID","Summary","Statistics")) %>% filter(Summary==kTotalTitle)
-  dfTotal$bandwidth <- map_chr(dfTotal$Statistics, calcByte) %>% as.numeric()
+  dfTotal$bandwidth <- map_chr(dfTotal$Statistics, ~ as.character(calcByte(.))) %>%
+    as.numeric()
   addTotalRow <- c(kTotalTitle, dfTotal[1, "Statistics"], dfTotal[1, "bandwidth"], yyyymm)
   dfTop30 <- getTargetRows(inputCsv,
                            "###Top 30 Applications by Bandwidth and Sessions###",
                            30,
                            c("ID", "application", "バンド幅", "セッション"))
   dfTop30$yyyymm <- yyyymm
-  dfTop30$bandwidth <- map_chr(dfTop30$バンド幅, calcByte) %>% as.numeric()
+  dfTop30$bandwidth <- map_chr(dfTop30$バンド幅, ~ as.character(calcByte(.))) %>% as.numeric()
   dfTop30 <- dfTop30 %>% select("application", "バンド幅", "bandwidth", "yyyymm") %>% rbind(addTotalRow)
   return(dfTop30)
 }

@@ -132,7 +132,6 @@ if (!error_f){
 # google authentication
 gs4_auth(
   email = gargle::gargle_oauth_email(),
-  path = NULL,
   scopes = "https://www.googleapis.com/auth/spreadsheets",
   cache = gargle::gargle_oauth_cache(),
   use_oob = gargle::gargle_oob_default(),
