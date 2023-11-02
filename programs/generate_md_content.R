@@ -1,6 +1,6 @@
 #' @file generate_md_content.R
 #' @author Mariko Ohtsuka
-#' @date 2023.10.6
+#' @date 2023.11.2
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
@@ -70,9 +70,13 @@ GetFileListInDirectory <- function(folder_path, file_extension) {
 #' @param review_month The month of review
 #' @param review_day The day of review
 CreateMdFiles <- function(year_month, createName, review_year, review_month, review_day) {
-  dayOfWeek <- GetWeekdayInJapanese(review_year, review_month, review_day)
+  dayOfWeek <- ifelse(!is.na(review_month) & !is.na(review_day),
+                      GetWeekdayInJapanese(review_year, review_month, review_day),
+                      "")
   year <- str_sub(year_month, 1, 4)
   month <- str_sub(year_month, 5, str_length(year_month))
+  review_month <- ifelse(!is.na(review_month), review_month, " ")
+  review_day <- ifelse(!is.na(review_day), review_day, " ")
   textData <- str_c(
     "様式番号:ISF27-8<br><br>  ",
     "# **UTM レポートレビュー記録**  ",
@@ -80,7 +84,9 @@ CreateMdFiles <- function(year_month, createName, review_year, review_month, rev
     str_c("確認:", kLastName, "<br>"),
     str_c("作成:", createName, "<br>"),
     "## **実施日時**",
-    str_c(review_year, "年", review_month, "月", review_day, "日", "（", dayOfWeek, "）13:30〜13:40"),
+    str_c(review_year, "年",
+          review_month , "月",
+          review_day, "日", "（", dayOfWeek, "）13:30〜13:40"),
     "## **参加者**",
     str_c(kApprover, "、", kParticipantsList),
     "## **対象期間**",
@@ -130,8 +136,8 @@ FindMissingYearMonths <- function(spreadSheet, existing_year_months) {
     spreadSheet[i, "event_day"] <- temp[2]
   }
   df_existing_year_months <- data.frame(target_year_months=existing_year_months)
-  df_target <- spreadSheet %>% anti_join(df_existing_year_months)
-  df_target <- df_target %>% filter(!is.na(eventDate))
+  df_target <- spreadSheet %>% anti_join(df_existing_year_months, by="target_year_months")
+#  df_target <- df_target %>% filter(!is.na(eventDate))
   return(df_target)
 }
 # ------ main ------
@@ -147,4 +153,4 @@ if (nrow(create_md_year_months) > 0) {
                   create_md_year_months[i, "event_day"])
   }
 }
-rm(list=ls())
+#rm(list=ls())
