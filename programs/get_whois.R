@@ -122,6 +122,12 @@ if (length(output_whois_jp) > 0){
   }) %>% reduce(rbind) %>% data.frame()
   colnames(jp_whois_info) <- c('ip', 'orgname', 'country', 'domain')
   jp_whois_info <- jp_whois_info %>% filter(!is.na(orgname))
+  for (i in 1:ncol(whois_jp)) {
+    whois_jp[, i] <- unlist(whois_jp[, i])
+  }
+  for (i in 1:ncol(whois_not_jp)) {
+    whois_not_jp[, i] <- unlist(whois_not_jp[, i])
+  }
   output_jp <- jp_whois_info %>% bind_rows(anti_join(whois_jp, jp_whois_info, by='ip'))
 } else {
   output_jp <- whois_jp
