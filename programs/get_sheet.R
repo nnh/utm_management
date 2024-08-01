@@ -72,7 +72,7 @@ GetMaintenanceIpInfo <- function(static_ip_table, anet_ip_list){
 #' @param dhcpFileName The file name
 #' @return a data frame
 readDhcpTxt <- function(dhcpFileEncoding, dhcpFileName){
-  return (read.delim(str_c(ext_path, '/', dhcpFileName), header=F, as.is=T, fileEncoding=dhcpFileEncoding))
+  return (read.delim(str_c(ext_path, '/', dhcpFileName), header=F, as.is=T, fileEncoding=dhcpFileEncoding,　encoding = "UTF-8"))
 }
 # ------ main ------
 source(here("programs", "common.R"), encoding="UTF-8")

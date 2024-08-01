@@ -83,7 +83,7 @@ GetVpnLog <- function(){
 #' @param none
 #' @return whois information data frame.
 GetWhoisCsv <- function(){
-  whois_csv <- read.csv(str_c(ext_path, '/', kWhoisCsvName), na='') %>%
+  whois_csv <- read.csv(file.path(ext_path, kWhoisCsvName), na='') %>%
     map( ~ { str_replace_na(.) %>% str_replace_all('NA', '') }) %>% as.data.frame()
   if (!exists("whois_csv")){
     error_f <- T
