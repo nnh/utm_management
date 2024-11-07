@@ -21,7 +21,8 @@ ReadLog <- function(input_file_path){
   if (os == "unix"){
     lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "utf-8")
   } else{
-    lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "cp932")
+    #lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "cp932")
+    lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "utf-8")
   }
   close(con=con)
   return(lines)
