@@ -9,8 +9,22 @@ def load_config(config_file):
         config = json.load(f)
     return config
 
-def convert_md_files_in_directory(input_dir, output_dir=None):
+def convert_md_files_in_directory(input_directory, output_directory=None):
     """指定ディレクトリ内のすべてのMarkdownファイルをPDFに変換する関数"""
+    # ホームディレクトリを取得
+    home_directory = os.path.expanduser("~")
+    
+    # 入力ディレクトリの絶対パスを作成
+    input_dir = os.path.join(home_directory, input_directory)
+    
+    # 出力ディレクトリが指定されていない場合は、入力ディレクトリと同じ場所に保存
+    if output_directory:
+        output_dir = os.path.join(home_directory, output_directory)
+    else:
+        output_dir = input_dir
+
+    # 出力ディレクトリが存在しない場合は作成
+    os.makedirs(output_dir, exist_ok=True)
     # 指定されたディレクトリ内の全ての.mdファイルを取得
     for filename in os.listdir(input_dir):
         if filename.endswith('.md'):
