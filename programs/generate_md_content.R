@@ -86,7 +86,7 @@ CreateMdFiles <- function(year_month, createName, review_year, review_month, rev
     "## **実施日時**",
     str_c(review_year, "年",
           review_month , "月",
-          review_day, "日", "（", dayOfWeek, "）13:30〜13:40"),
+          review_day, "日", "（", dayOfWeek, "）13:30〜14:00"),
     "## **参加者**",
     str_c(kApprover, "、", kParticipantsList),
     "## **対象期間**",
@@ -134,6 +134,9 @@ FindMissingYearMonths <- function(spreadSheet, existing_year_months) {
     temp <- spreadSheet[i, "eventDate"] %>% str_split("/") %>% unlist()
     spreadSheet[i, "event_month"] <- temp[1]
     spreadSheet[i, "event_day"] <- temp[2]
+  }
+  if (is.null(existing_year_months)) {
+    return(spreadSheet)
   }
   df_existing_year_months <- data.frame(target_year_months=existing_year_months)
   df_target <- spreadSheet %>% anti_join(df_existing_year_months, by="target_year_months")
