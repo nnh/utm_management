@@ -11,6 +11,7 @@ def load_config(config_file):
 
 def convert_md_files_in_directory(input_directory, output_directory=None):
     """指定ディレクトリ内のすべてのMarkdownファイルをPDFに変換する関数"""
+    css_file = "styles.css"
     # ホームディレクトリを取得
     home_directory = os.path.expanduser("~")
     
@@ -48,7 +49,8 @@ def convert_md_files_in_directory(input_directory, output_directory=None):
             html_text = markdown.markdown(markdown_text)
             
             # HTMLをPDFに変換
-            HTML(string=html_text).write_pdf(output_file)
+#            HTML(string=html_text).write_pdf(output_file)
+            HTML(string=html_text, base_url=os.path.dirname(css_file)).write_pdf(output_file, stylesheets=[css_file])
             print(f"PDFが作成されました: {output_file}")
 
 # 設定ファイルからディレクトリを読み込む
