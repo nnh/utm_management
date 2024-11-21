@@ -1,11 +1,12 @@
 /* ベーススタイル */
 body {
-  font-family: "Times New Roman", serif; /* シンプルでフォーマルなフォント */
-  line-height: 1.8; /* 行間を広めに */
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", "Noto Sans", Meiryo, sans-serif;
+  line-height: 1; /* 行間を広めに */
   color: #000; /* テキストを黒に */
   background-color: #fff; /* 背景を白に */
   margin: 0 auto; /* 中央揃え */
-  padding: 20px; /* ページ余白 */
+  padding: 10px; /* ページ余白 */
   max-width: 800px; /* 最大幅を制限 */
 }
 
@@ -13,82 +14,17 @@ body {
 h1,
 h2,
 h3 {
-  color: #000; /* 見出しも黒に */
-  border-bottom: 1px solid #000; /* 下線 */
+  color: #000;
+  border-bottom: 1px solid #000;
   margin-bottom: 10px;
-}
-h1 {
-  font-size: 2.5em;
-}
-h2 {
-  font-size: 2em;
-}
-h3 {
-  font-size: 1.5em;
-}
 
-/* 段落 */
-p {
-  text-align: justify; /* 両端揃え */
-  margin: 15px 0; /* 上下の余白 */
-}
-
-/* リスト */
-ul,
-ol {
-  margin: 15px 40px; /* インデントを付ける */
-  line-height: 1.6;
-}
-ul li {
-  list-style-type: disc; /* 箇条書きのデザイン */
-}
-ol li {
-  list-style-type: decimal; /* 番号付きリスト */
-}
-
-/* コードブロック */
-pre {
-  background: #f5f5f5; /* 明るいグレー */
-  color: #000; /* 黒文字 */
-  padding: 10px;
-  border: 1px solid #ccc; /* 薄い枠線 */
-  font-family: "Courier New", Courier, monospace;
-}
-code {
-  background: #f5f5f5;
-  padding: 2px 4px;
-  border: 1px solid #ccc;
-  font-family: "Courier New", Courier, monospace;
-}
-
-/* 引用 */
-blockquote {
-  border-left: 4px solid #000; /* 引用部分の左線 */
-  margin: 20px 40px;
-  padding: 10px 20px;
-  color: #555; /* 灰色で目立たせる */
-  font-style: italic;
-}
-
-/* テーブル */
-table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 20px 0;
-}
-table th,
-table td {
-  border: 1px solid #000;
-  padding: 10px;
-  text-align: left;
-}
-table th {
-  background: #f5f5f5; /* 明るいグレー */
-  font-weight: bold;
-}
-table tr:nth-child(even) {
-  background: #fff; /* 白 */
-}
-table tr:nth-child(odd) {
-  background: #f5f5f5; /* グレー */
+  h1 {
+    font-size: 2.5em;
+  }
+  h2 {
+    font-size: 2em;
+  }
+  h3 {
+    font-size: 1.5em;
+  }
 }

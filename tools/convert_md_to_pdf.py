@@ -1,7 +1,7 @@
 import os
 import json
 import markdown
-from weasyprint import HTML
+from weasyprint import HTML, CSS
 
 def load_config(config_file):
     """設定ファイルを読み込む関数"""
@@ -12,6 +12,9 @@ def load_config(config_file):
 def convert_md_files_in_directory(input_directory, output_directory=None):
     """指定ディレクトリ内のすべてのMarkdownファイルをPDFに変換する関数"""
     css_file = "styles.css"
+    if not os.path.exists(css_file):
+        print(f"CSSファイルが見つかりません: {css_file}")
+        return
     # ホームディレクトリを取得
     home_directory = os.path.expanduser("~")
     
@@ -49,8 +52,7 @@ def convert_md_files_in_directory(input_directory, output_directory=None):
             html_text = markdown.markdown(markdown_text)
             
             # HTMLをPDFに変換
-#            HTML(string=html_text).write_pdf(output_file)
-            HTML(string=html_text, base_url=os.path.dirname(css_file)).write_pdf(output_file, stylesheets=[css_file])
+            HTML(string=html_text, base_url=os.path.abspath(os.path.dirname(__file__))).write_pdf(output_file, stylesheets=[CSS(css_file)])
             print(f"PDFが作成されました: {output_file}")
 
 # 設定ファイルからディレクトリを読み込む
