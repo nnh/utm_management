@@ -1,0 +1,30 @@
+/* ベーススタイル */
+body {
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", "Noto Sans", Meiryo, sans-serif;
+  line-height: 1; /* 行間を広めに */
+  color: #000; /* テキストを黒に */
+  background-color: #fff; /* 背景を白に */
+  margin: 0 auto; /* 中央揃え */
+  padding: 10px; /* ページ余白 */
+  max-width: 800px; /* 最大幅を制限 */
+}
+
+/* 見出しのデザイン */
+h1,
+h2,
+h3 {
+  color: #000;
+  border-bottom: 1px solid #000;
+  margin-bottom: 10px;
+
+  h1 {
+    font-size: 2.5em;
+  }
+  h2 {
+    font-size: 2em;
+  }
+  h3 {
+    font-size: 1.5em;
+  }
+}
