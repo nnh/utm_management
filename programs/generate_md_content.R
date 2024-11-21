@@ -1,6 +1,6 @@
 #' @file generate_md_content.R
 #' @author Mariko Ohtsuka
-#' @date 2023.11.2
+#' @date 2024.11.21
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
@@ -79,25 +79,25 @@ CreateMdFiles <- function(year_month, createName, review_year, review_month, rev
   review_day <- ifelse(!is.na(review_day), review_day, " ")
   textData <- str_c(
     "様式番号:ISF27-8<br><br>  ",
-    "# **UTM レポートレビュー記録**  ",
+    "# UTMレポートレビュー記録  ",
     str_c("承認:", kLastName, "<br>"),
     str_c("確認:", kLastName, "<br>"),
     str_c("作成:", createName, "<br>"),
-    "## **実施日時**",
+    "## 実施日時",
     str_c(review_year, "年",
           review_month , "月",
           review_day, "日", "（", dayOfWeek, "）13:30〜14:00"),
-    "## **参加者**",
+    "## 参加者",
     str_c(kApprover, "、", kParticipantsList),
-    "## **対象期間**",
+    "## 対象期間",
     str_c(year, "年", month, "月"),
-    "## **問題点**",
+    "## 問題点",
     "定型の手順に沿って確認、対応を実施した。特記すべき問題点は存在しなかった。",
-    "## **改善点・対応策**",
+    "## 改善点・対応策",
     "特になし。",
-    "## **今後の対応課題・対応中の課題**",
+    "## 今後の対応課題・対応中の課題",
     "特になし",
-    "## **責任者確認**",
+    "## 責任者確認",
     str_c(review_year, "年", review_month, "月", review_day, "日　", kLastName),
     sep="\n"
   )
@@ -156,4 +156,3 @@ if (nrow(create_md_year_months) > 0) {
                   create_md_year_months[i, "event_day"])
   }
 }
-#rm(list=ls())
