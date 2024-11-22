@@ -5,33 +5,10 @@
 #' @date YYYY.MM.DD
 rm(list=ls())
 # ------ libraries ------
-library(tidyverse)
 library(here)
-library(xml2)
 # ------ constants ------
-kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
-kUserReport <- "User Report without guest"
-kTrafficSummary <- "Traffic Summary"
-kTargetFiles <- c("Admin and System Events Report", 
-                  "Bandwidth and Applications Report without guest", 
-                  "Client Reputation without guest", 
-                  "List of terminals connected to DataCenter", 
-                  "List of terminals connected to nmccrc", 
-                  "List of terminals connected vpn", 
-                  "User Report without guest") 
-kIpColumns <- c("Login_Interface", "Login_Source", "Destination", "Hostname_or_IP_", "User__or_IP_", "User_or_IP_")
+source(here("programs", "test_common.R"), encoding="UTF-8")
 # ------ functions ------
-GetHomeDir <- function() {
-  os <- Sys.info()["sysname"]
-  if (os == "Windows") {
-    home_dir <- Sys.getenv("USERPROFILE")
-  } else if (os == "Darwin") {
-    home_dir <- Sys.getenv("HOME")
-  } else {
-    stop("Unsupported OS")
-  }
-  return (home_dir)
-}
 GetTagAndNames <- function(xml_data, tagName) {
   target <- xml_data %>% xml_find_all(str_c(".//", tagName))
   target_names <- target %>% xml_attr("name")
@@ -133,7 +110,11 @@ CombineRowsIpAddressList <- function(data) {
   return(res)
 }
 GetDhcp <- function() {
-  dhcp <- file.path(ext_path, "dhcp.txt") %>% read_lines() %>% 
+  temp <- file.path(ext_path, "dhcp.txt") %>% read_lines()
+  if (!exists("temp")) {
+    stop("dhcp.txt is missing.")
+  }
+  dhcp <- temp %>% 
     trimws() %>% 
     str_extract(str_c("^", kIpAddr, ".*$")) %>% 
     na.omit() %>%
@@ -141,47 +122,26 @@ GetDhcp <- function() {
   df_dhcp <- dhcp %>% map( ~ {
     ip <- .[1]
     macAddress <- .[3]
-    hostName <- ifelse(.[4] == "", "aaa", .[4])
+    hostName <- ifelse(.[4] == "", "DHCPログのホスト名が空白のため詳細確認不可能", .[4])
     res <- tibble(ip, macAddress, hostName)
     return(res)
   }) %>% bind_rows()
   return(df_dhcp)
 }
 
-GetBlackList <- function() {
-  configFileName <- list.files(ext_path) %>% str_extract('[A-Z]{6}[0-9]{2}_[0-9]{8}_[0-9]{4}\\.conf') %>% na.omit()
-  configFile <- file.path(ext_path, configFileName) %>% read_lines() %>% trimws()
-  blackList <- tibble(ip=character(), hostName=character(), macAddress=character())
-  blackListRow <- 0
-  for (i in 1:length(configFile)) {
-    if (str_detect(configFile[i], "Black[0-9]+")) {
-      blackListRow <- blackListRow + 1
-      blackList[blackListRow, "hostName"] <- configFile[i] %>% str_extract('".*"') %>% str_remove_all('"')
-      temp_row <- i + 1
-      while(temp_row < length(configFile)) {
-        if (str_detect(configFile[temp_row], "set subnet")) {
-          blackList[blackListRow, "ip"] <- configFile[temp_row] %>% str_remove("set subnet ") %>% str_remove(" 255.255.255.255")
-        }
-        if (str_detect(configFile[temp_row], "next")) {
-          break
-        }
-        temp_row <- temp_row + 1
-      }
-    }
-  } 
-  return(blackList)
-}
-GetDeviceList <- function() {
+GetDeviceList <- function(blackList, staticIp) {
+  deviceList <- staticIp %>% select("ip", "hostName")
   dhcp <- GetDhcp()
-  blackList <- GetBlackList()
-  deviceList <- dhcp %>% bind_rows(blackList)
+  deviceList <- deviceList %>% bind_rows(dhcp)
+  deviceList <- deviceList %>% bind_rows(blackList)
+  whois <- file.path(ext_path, "whois.csv") %>% read_csv() %>% rename("hostName"="User", "macAddress"="MAC_Address") %>% 
+    select("ip", "hostName", "macAddress")
+  deviceList <- deviceList %>% bind_rows(whois)
   deviceList <- deviceList %>% add_row(ip="127.0.0.1", hostName="localAddress", macAddress=NA)
   res <- deviceList %>% arrange(ip)
   return(res)
 }
 # ------ main ------
-home_dir <- GetHomeDir()
-ext_path <- home_dir %>% file.path("Downloads", "ext")
 input_path <- home_dir %>% file.path("Downloads", "input")
 inputFiles <- input_path %>% GetTargetFilePath()
 fileNames <- inputFiles %>% map_chr( ~ GetBaseName(.))
@@ -191,13 +151,22 @@ if (!identical(sort(fileNames), sort(kTargetFiles))) {
 tables <- inputFiles %>% map( ~ GetRawDataList(.))
 names(tables) <- fileNames
 # IPアドレスらしき情報を収集する
-ipAddresses <- tables %>% map( ~ {
+tables_vec <- tables %>% map( ~ {
   table <- .
   res <- table %>% map( ~ unlist(.)) %>% unlist()
   return(res)
-}) %>% unlist() %>% str_extract(kIpAddr) %>% na.omit() %>% unique() %>% tibble(ip=.)
-# dhcpとか
-deviceList <- GetDeviceList()
+}) %>% unlist()
+ipAddresses <- tables_vec %>% str_extract(kIpAddr) %>% na.omit() %>% unique() %>% tibble(ip=.)
+domains <- tables_vec %>% str_extract("[a-z0-9.-]+\\.[a-z]{2,}") %>% na.omit() %>% unique() %>% tibble(domain=.)
+staticIp <- "staticIpTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% 
+  filter(!is.na(ホスト名)) %>%
+  select(c("ip"="IPアドレス", "hostName"="ホスト名", "description"="設置場所", "user"="管理者"))
+sinetTable <- "sinetTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>%
+  select(c("user"="使用者名", "hostName"="コンピュータ名", "登録日", "廃棄日"))
+
+blackList <- "blackList.json" %>% file.path(ext_path, .) %>% fromJSON()
+deviceList <- GetDeviceList(blackList, staticIp)
+
 ipMacHosts <- ipAddresses %>% left_join(deviceList, by="ip")
 
 
@@ -205,29 +174,5 @@ ipMacHosts <- ipAddresses %>% left_join(deviceList, by="ip")
 
 
 
-
-
-
-#temp_ip_list <- ip_list %>% rename("ip"="IP")
-#ipAddressList <- temp_ip_list %>% bind_rows(whois_csv) %>% CombineRowsIpAddressList()
-
-#ddd <- tables %>% map( ~ {
-#  table <- .
-#  res <- table %>% map( ~ {
-#    df <- .
-#    if (nrow(df) == 0) {
-#      return(df)
-#    }
-#    ipCols <- df %>% select(any_of(kIpColumns))
-#    if (ncol(ipCols) != 1) {
-#      return(NULL)
-#    }
-#    targetColName <- colnames(ipCols)
-#    ipCols$ip <- ipCols[[targetColName]] %>% str_extract(kIpAddr)
-#    temp <- ipCols %>% left_join(ipAddressList, by="ip")
-#    res <- df %>% inner_join(temp, by=targetColName) %>% select(-"ip")
-#    return(res)
-#  })
-#})
 
 
