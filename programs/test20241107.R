@@ -9,6 +9,7 @@ library(tidyverse)
 library(here)
 library(xml2)
 # ------ constants ------
+kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
 kUserReport <- "User Report without guest"
 kTrafficSummary <- "Traffic Summary"
 kTargetFiles <- c("Admin and System Events Report", 
@@ -131,10 +132,57 @@ CombineRowsIpAddressList <- function(data) {
   res <- res %>% select(-"Duplicate")
   return(res)
 }
+GetDhcp <- function() {
+  dhcp <- file.path(ext_path, "dhcp.txt") %>% read_lines() %>% 
+    trimws() %>% 
+    str_extract(str_c("^", kIpAddr, ".*$")) %>% 
+    na.omit() %>%
+    str_split("\t")
+  df_dhcp <- dhcp %>% map( ~ {
+    ip <- .[1]
+    macAddress <- .[3]
+    hostName <- ifelse(.[4] == "", "aaa", .[4])
+    res <- tibble(ip, macAddress, hostName)
+    return(res)
+  }) %>% bind_rows()
+  return(df_dhcp)
+}
 
+GetBlackList <- function() {
+  configFileName <- list.files(ext_path) %>% str_extract('[A-Z]{6}[0-9]{2}_[0-9]{8}_[0-9]{4}\\.conf') %>% na.omit()
+  configFile <- file.path(ext_path, configFileName) %>% read_lines() %>% trimws()
+  blackList <- tibble(ip=character(), hostName=character(), macAddress=character())
+  blackListRow <- 0
+  for (i in 1:length(configFile)) {
+    if (str_detect(configFile[i], "Black[0-9]+")) {
+      blackListRow <- blackListRow + 1
+      blackList[blackListRow, "hostName"] <- configFile[i] %>% str_extract('".*"') %>% str_remove_all('"')
+      temp_row <- i + 1
+      while(temp_row < length(configFile)) {
+        if (str_detect(configFile[temp_row], "set subnet")) {
+          blackList[blackListRow, "ip"] <- configFile[temp_row] %>% str_remove("set subnet ") %>% str_remove(" 255.255.255.255")
+        }
+        if (str_detect(configFile[temp_row], "next")) {
+          break
+        }
+        temp_row <- temp_row + 1
+      }
+    }
+  } 
+  return(blackList)
+}
+GetDeviceList <- function() {
+  dhcp <- GetDhcp()
+  blackList <- GetBlackList()
+  deviceList <- dhcp %>% bind_rows(blackList)
+  deviceList <- deviceList %>% add_row(ip="127.0.0.1", hostName="localAddress", macAddress=NA)
+  res <- deviceList %>% arrange(ip)
+  return(res)
+}
 # ------ main ------
 home_dir <- GetHomeDir()
-input_path <- home_dir %>% file.path("Downloads")
+ext_path <- home_dir %>% file.path("Downloads", "ext")
+input_path <- home_dir %>% file.path("Downloads", "input")
 inputFiles <- input_path %>% GetTargetFilePath()
 fileNames <- inputFiles %>% map_chr( ~ GetBaseName(.))
 if (!identical(sort(fileNames), sort(kTargetFiles))) {
@@ -142,26 +190,44 @@ if (!identical(sort(fileNames), sort(kTargetFiles))) {
 }
 tables <- inputFiles %>% map( ~ GetRawDataList(.))
 names(tables) <- fileNames
-temp_ip_list <- ip_list %>% rename("ip"="IP")
-ipAddressList <- temp_ip_list %>% bind_rows(whois_csv) %>% CombineRowsIpAddressList()
-
-ddd <- tables %>% map( ~ {
+# IPアドレスらしき情報を収集する
+ipAddresses <- tables %>% map( ~ {
   table <- .
-  res <- table %>% map( ~ {
-    df <- .
-    if (nrow(df) == 0) {
-      return(df)
-    }
-    ipCols <- df %>% select(any_of(kIpColumns))
-    if (ncol(ipCols) != 1) {
-      return(NULL)
-    }
-    targetColName <- colnames(ipCols)
-    ipCols$ip <- ipCols[[targetColName]] %>% str_extract(kIpAddr)
-    temp <- ipCols %>% left_join(ipAddressList, by="ip")
-    res <- df %>% inner_join(temp, by=targetColName) %>% select(-"ip")
-    return(res)
-  })
-})
+  res <- table %>% map( ~ unlist(.)) %>% unlist()
+  return(res)
+}) %>% unlist() %>% str_extract(kIpAddr) %>% na.omit() %>% unique() %>% tibble(ip=.)
+# dhcpとか
+deviceList <- GetDeviceList()
+ipMacHosts <- ipAddresses %>% left_join(deviceList, by="ip")
+
+
+
+
+
+
+
+
+
+#temp_ip_list <- ip_list %>% rename("ip"="IP")
+#ipAddressList <- temp_ip_list %>% bind_rows(whois_csv) %>% CombineRowsIpAddressList()
+
+#ddd <- tables %>% map( ~ {
+#  table <- .
+#  res <- table %>% map( ~ {
+#    df <- .
+#    if (nrow(df) == 0) {
+#      return(df)
+#    }
+#    ipCols <- df %>% select(any_of(kIpColumns))
+#    if (ncol(ipCols) != 1) {
+#      return(NULL)
+#    }
+#    targetColName <- colnames(ipCols)
+#    ipCols$ip <- ipCols[[targetColName]] %>% str_extract(kIpAddr)
+#    temp <- ipCols %>% left_join(ipAddressList, by="ip")
+#    res <- df %>% inner_join(temp, by=targetColName) %>% select(-"ip")
+#    return(res)
+#  })
+#})
 
 
