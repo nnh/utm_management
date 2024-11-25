@@ -8,6 +8,7 @@ rm(list=ls())
 library(here)
 # ------ constants ------
 source(here("programs", "test_common.R"), encoding="UTF-8")
+kNoDhcpMessage <- "DHCPログのホスト名が空白のため詳細確認不可能"
 # ------ functions ------
 GetTagAndNames <- function(xml_data, tagName) {
   target <- xml_data %>% xml_find_all(str_c(".//", tagName))
@@ -122,56 +123,81 @@ GetDhcp <- function() {
   df_dhcp <- dhcp %>% map( ~ {
     ip <- .[1]
     macAddress <- .[3]
-    hostName <- ifelse(.[4] == "", "DHCPログのホスト名が空白のため詳細確認不可能", .[4])
+    hostName <- ifelse(.[4] == "", kNoDhcpMessage, .[4])
     res <- tibble(ip, macAddress, hostName)
     return(res)
   }) %>% bind_rows()
   return(df_dhcp)
 }
 
-GetDeviceList <- function(blackList, staticIp) {
+GetDeviceList <- function() {
+  staticIp <- GetStaticIpFromJson()
   deviceList <- staticIp %>% select("ip", "hostName")
   dhcp <- GetDhcp()
   deviceList <- deviceList %>% bind_rows(dhcp)
+  blackList <- "blackList.json" %>% file.path(ext_path, .) %>% fromJSON()
   deviceList <- deviceList %>% bind_rows(blackList)
+  whiteList <- "whitelistTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% select("ip"="domain", "hostName"="Description1")
+  deviceList <- deviceList %>% bind_rows(whiteList)
   whois <- file.path(ext_path, "whois.csv") %>% read_csv() %>% rename("hostName"="User", "macAddress"="MAC_Address") %>% 
     select("ip", "hostName", "macAddress")
   deviceList <- deviceList %>% bind_rows(whois)
   deviceList <- deviceList %>% add_row(ip="127.0.0.1", hostName="localAddress", macAddress=NA)
-  res <- deviceList %>% arrange(ip)
+  deviceList$tempSeq <- 1:nrow(deviceList)
+  uniqueDeviceList <- deviceList %>%
+    group_by(ip) %>%
+    slice_min(tempSeq) %>% # 行番号の一番若い情報を残す
+    ungroup()
+  uniqueDeviceList$tempSeq <-NULL
+  deviceListHostName <- uniqueDeviceList %>% setDeviceHostName()
+  res <- deviceListHostName %>% arrange(ip)
+  return(res)
+}
+GetStaticIpFromJson <- function() {
+  staticIp <- "staticIpTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% 
+    filter(!is.na(ホスト名)) %>%
+    select(c("ip"="IPアドレス", "hostName"="ホスト名", "description"="設置場所", "user"="管理者"))
+  return(staticIp)  
+}
+GetInputTables <- function(input_path) {
+  inputFiles <- input_path %>% GetTargetFilePath()
+  fileNames <- inputFiles %>% map_chr( ~ GetBaseName(.))
+  if (!identical(sort(fileNames), sort(kTargetFiles))) {
+    stop("入力ファイルが不足しています")
+  }
+  tables <- inputFiles %>% map( ~ GetRawDataList(.))
+  names(tables) <- fileNames
+  return(tables)  
+}
+GetIpAddressesAndDomains <- function(tables) {
+  # IPアドレスらしき情報を収集する
+  tables_vec <- tables %>% map( ~ {
+    table <- .
+    res <- table %>% map( ~ unlist(.)) %>% unlist()
+    return(res)
+  }) %>% unlist()
+  ipAddresses <- tables_vec %>% str_extract(kIpAddr) %>% na.omit() %>% unique() %>% tibble(ip=.)
+  domains <- tables_vec %>% str_extract("[a-z0-9.-]+\\.[a-z]{2,}") %>% na.omit() %>% unique() %>% tibble(ip=.)
+  res <- ipAddresses %>% bind_rows(domains)
+  return(res)
+}
+setDeviceHostName <- function(deviceList) {
+  privateAddresses <- deviceList %>% filter(!is.na(macAddress))
+  publicAddresses <- deviceList %>% filter(is.na(macAddress))
+  privateHostNames <- privateAddresses$hostName %>% unique() %>% tibble(hostName=.)
+  sinetTable <- "sinetTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% filter(is.na(廃棄日)) %>% 
+    select(c("user"="使用者名", "hostName"="コンピュータ名", "description"="部署名")) 
+  privateHostNameAndUser <- privateHostNames %>% left_join(sinetTable, by="hostName")
+  privateAddresseInfo <- privateHostNameAndUser %>% inner_join(privateAddresses, by="hostName", relationship = "many-to-many") 
+  res <- privateAddresseInfo %>% bind_rows(publicAddresses) %>% arrange("ip")
   return(res)
 }
 # ------ main ------
 input_path <- home_dir %>% file.path("Downloads", "input")
-inputFiles <- input_path %>% GetTargetFilePath()
-fileNames <- inputFiles %>% map_chr( ~ GetBaseName(.))
-if (!identical(sort(fileNames), sort(kTargetFiles))) {
-  stop("入力ファイルが不足しています")
-}
-tables <- inputFiles %>% map( ~ GetRawDataList(.))
-names(tables) <- fileNames
-# IPアドレスらしき情報を収集する
-tables_vec <- tables %>% map( ~ {
-  table <- .
-  res <- table %>% map( ~ unlist(.)) %>% unlist()
-  return(res)
-}) %>% unlist()
-ipAddresses <- tables_vec %>% str_extract(kIpAddr) %>% na.omit() %>% unique() %>% tibble(ip=.)
-domains <- tables_vec %>% str_extract("[a-z0-9.-]+\\.[a-z]{2,}") %>% na.omit() %>% unique() %>% tibble(domain=.)
-staticIp <- "staticIpTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% 
-  filter(!is.na(ホスト名)) %>%
-  select(c("ip"="IPアドレス", "hostName"="ホスト名", "description"="設置場所", "user"="管理者"))
-sinetTable <- "sinetTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>%
-  select(c("user"="使用者名", "hostName"="コンピュータ名", "登録日", "廃棄日"))
-
-blackList <- "blackList.json" %>% file.path(ext_path, .) %>% fromJSON()
-deviceList <- GetDeviceList(blackList, staticIp)
-
-ipMacHosts <- ipAddresses %>% left_join(deviceList, by="ip")
-
-
-
-
+tables <- input_path %>% GetInputTables()
+ipAddresses <- tables %>% GetIpAddressesAndDomains()
+deviceList <- GetDeviceList()
+test <- ipAddresses %>% left_join(deviceList, by="ip")
 
 
 
