@@ -29,7 +29,7 @@ GetDhcp <- function() {
 
 GetDeviceList <- function() {
   staticIp <- GetStaticIpFromJson() %>% filter(hostName != "DHCP Start" & hostName != "DHCP End")
-  deviceList <- staticIp %>% select("ip", "hostName")
+  deviceList <- staticIp
   dhcp <- GetDhcp()
   deviceList <- deviceList %>% bind_rows(dhcp)
   blackList <- "blackList.json" %>% file.path(ext_path, .) %>% fromJSON()
@@ -53,11 +53,14 @@ GetDeviceList <- function() {
 GetStaticIpFromJson <- function() {
   staticIp <- "staticIpTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% 
     filter(!is.na(ホスト名)) %>%
-    select(c("ip"="IPアドレス", "hostName"="ホスト名", "description"="設置場所", "user"="管理者"))
+    select(c("ip"="IPアドレス", "hostName"="ホスト名", "description"="設置場所", 管理者, 用途))
+  staticIp$user <- ifelse(!is.na(staticIp$管理者), staticIp$管理者, staticIp$用途)
+  staticIp$管理者 <- NULL
+  staticIp$用途 <- NULL
   return(staticIp)  
 }
 setDeviceHostName <- function(deviceList) {
-  privateAddresses <- deviceList %>% filter(!is.na(macAddress))
+  privateAddresses <- deviceList %>% filter(!is.na(macAddress)) %>% select(-c("user", "description"))
   publicAddresses <- deviceList %>% filter(is.na(macAddress))
   privateHostNames <- privateAddresses$hostName %>% unique() %>% tibble(hostName=.)
   sinetTable <- "sinetTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% filter(is.na(廃棄日)) %>% 

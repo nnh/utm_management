@@ -65,7 +65,10 @@ ExtractIdData <- function(table_node) {
     # 子タグの名前と内容をリストに格納
     tag_names <- xml_name(child_tags) %>% AddSequenceToDuplicates()
     tag_values <- xml_text(child_tags)
-    df <- tag_values %>% t() %>% as_tibble() %>% setNames(tag_names)
+    temp_t <- tag_values %>% t()
+    temp_col <- 1:ncol(temp_t) %>% str_c("tempCol_", .)
+    colnames(temp_t) <- temp_col
+    df <- temp_t %>% as_tibble() %>% setNames(tag_names)
     return(df)
   })
   return(data_list)
