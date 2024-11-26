@@ -22,36 +22,26 @@ GetIpAddressesAndDomains <- function(tables) {
   res <- ipAddresses %>% bind_rows(domains)
   return(res)
 }
-EditAdminAndSystemEvents <- function(adminAndSystemEvents) {
-  adminAndSystemEvents_loginSummary <- adminAndSystemEvents$`Login Summary`
-  adminAndSystemEvents_loginSummary$ip <- adminAndSystemEvents_loginSummary$Login_Interface %>% str_extract(kIpAddr)
-  adminAndSystemEvents_loginSummary <- adminAndSystemEvents_loginSummary %>% left_join(userInfo, by="ip")
-  adminAndSystemEvents_ListOfFailedLogins <- adminAndSystemEvents$`List of Failed Logins`
-  adminAndSystemEvents_ListOfFailedLogins$ip <- adminAndSystemEvents$`List of Failed Logins`$Login_Source %>% str_extract(kIpAddr)
-  adminAndSystemEvents_ListOfFailedLogins <- adminAndSystemEvents_ListOfFailedLogins %>% left_join(userInfo, by="ip")
-  adminAndSystemEvents$`Login Summary` <- adminAndSystemEvents_loginSummary
-  adminAndSystemEvents$`List of Failed Logins` <- adminAndSystemEvents_ListOfFailedLogins
-  return(adminAndSystemEvents)
+JoinReportAndUserInfo <- function(target, itemName, key) {
+  temp <- target[[itemName]] %>% left_join(userInfo, by=key)
+  target[[itemName]] <- temp
+  return(target)
 }
-EditBandwidthAndApplicationsReport <- function(bandwidthAndApplicationsReport) {
-  top30User <- bandwidthAndApplicationsReport$`Top 30 Users by Bandwidth and Sessions` %>% left_join(userInfo, by=c("User_or_IP_"="ip"))
-  top30Destination <- bandwidthAndApplicationsReport$`Top 30 Destination by Bandwidth and Sessions` %>% 
-    left_join(userInfo, by=c("Hostname_or_IP_"="ip"))
-  top30Destination$user <- NULL
-  top30Destination$description <- NULL
-  top30Destination$macAddress <- NULL
-  bandwidthAndApplicationsReport$`Top 30 Users by Bandwidth and Sessions` <- top30User
-  bandwidthAndApplicationsReport$`Top 30 Destination by Bandwidth and Sessions` <- top30Destination
-  return(bandwidthAndApplicationsReport)
-}
-EditClientReputation <- function(clientReputation) {
-  topUsers <- clientReputation$レピュテーションスコアの上位ユーザー %>% left_join(userInfo, by=c("User__or_IP_"="ip"))
-  topUsersScoreIncreaseRecent <- clientReputation$` 直近2期間にスコアが増加した上位ユーザー` %>% left_join(userInfo, by=c("User__or_IP_"="ip"))
-  topDevice <- clientReputation$レピュテーションスコアの大きい上位デバイス %>% left_join(userInfo, by=c("Device2"="ip"))
-  clientReputation$レピュテーションスコアの上位ユーザー <- topUsers
-  clientReputation$` 直近2期間にスコアが増加した上位ユーザー` <- topUsersScoreIncreaseRecent
-  clientReputation$レピュテーションスコアの大きい上位デバイス <- topDevice
-  return(clientReputation)
+JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
+  tableName <- tableInfo$tableName
+  targetItemAndColumn <- tableInfo$targetItemAndColumn
+  targetTable <- tables[[tableName]]
+  for (i in 1:length(targetItemAndColumn)) {
+    itemName <- targetItemAndColumn[[i]]$itemName
+    columnName <- targetItemAndColumn[[i]]$columnName
+    key <- targetItemAndColumn[[i]]$key
+    if (tableName == kAdminAndSystemEvents) {
+      targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
+    }
+    targetTable <- targetTable %>% JoinReportAndUserInfo(itemName, key)
+  }
+  tables[[tableName]] <- targetTable
+  return(tables)
 }
 JoinUserInfo <- function(ipAddresses, deviceList) {
   # domain
@@ -76,12 +66,43 @@ JoinUserInfo <- function(ipAddresses, deviceList) {
   res <- userIpInfo %>% bind_rows(userDomainInfo)
   return(res)
 }
+SetTableInfo <- function() {
+  target <- kTargetFiles %>% map( ~ list(tableName=.,targetItemAndColumn=NA))
+  target[[1]]$targetItemAndColumn <- list(
+    list(itemName="Login Summary", columnName="Login_Interface", key="ip"),
+    list(itemName="List of Failed Logins", columnName="Login_Source", key="ip")
+  )
+  target[[2]]$targetItemAndColumn <- list(
+    list(itemName="Top 30 Users by Bandwidth and Sessions", columnName=NULL, key=c("User_or_IP_"="ip")),
+    list(itemName="Top 30 Destination by Bandwidth and Sessions", columnName=NULL, key=c("Hostname_or_IP_"="ip"))
+  )
+  target[[3]]$targetItemAndColumn <- list(
+    list(itemName="レピュテーションスコアの上位ユーザー", columnName=NULL, key=c("User__or_IP_"="ip")),
+    list(itemName=" 直近2期間にスコアが増加した上位ユーザー", columnName=NULL, key=c("User__or_IP_"="ip")),
+    list(itemName="レピュテーションスコアの大きい上位デバイス", columnName=NULL, key=c("Device2"="ip"))
+  )
+  kListOfTerminalsTarget <- list(
+    list(itemName="Top 100 Users by Bandwidth and Sessions", columnName=NULL, key=c("User_or_IP_"="ip"))
+  )
+  target[[4]]$targetItemAndColumn <- kListOfTerminalsTarget
+  target[[5]]$targetItemAndColumn <- kListOfTerminalsTarget
+  target[[6]]$targetItemAndColumn <- kListOfTerminalsTarget
+  target[[7]]$targetItemAndColumn <- list(
+    list(itemName="top10Destinations", columnName=NULL, key=c("Destination"="ip"))
+  )
+  return(target)
+}
 # ------ main ------
 input_path <- home_dir %>% file.path("Downloads", "input")
 tables <- input_path %>% GetInputTables()
 ipAddresses <- tables %>% GetIpAddressesAndDomains()
 deviceList <- GetDeviceList()
 userInfo <- JoinUserInfo(ipAddresses, deviceList)
-adminAndSystemEvents <- tables[[kTargetFiles[1]]] %>% EditAdminAndSystemEvents()
-bandwidthAndApplicationsReport <- tables[[kTargetFiles[2]]] %>% EditBandwidthAndApplicationsReport()
-clientReputation <- tables[[kTargetFiles[[3]]]]
+tableInfoList <- SetTableInfo()
+tablesJoinUserInfo <- tables
+for (i in 1:length(tablesJoinUserInfo)) {
+  tablesJoinUserInfo <- tableInfoList[[i]] %>% JoinReportAndUserInfoByTable(tablesJoinUserInfo, .)
+  for (j in 1:length(tablesJoinUserInfo[[i]])) {
+    tablesJoinUserInfo[[i]][[j]] <- tablesJoinUserInfo[[i]][[j]] %>% select(where(~ !all(is.na(.))))
+  }
+}

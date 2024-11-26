@@ -19,7 +19,7 @@ kTargetFiles <- c("Admin and System Events Report",
                   "List of terminals connected to nmccrc", 
                   "List of terminals connected vpn", 
                   "User Report without guest") 
-kIpColumns <- c("Login_Interface", "Login_Source", "Destination", "Hostname_or_IP_", "User__or_IP_", "User_or_IP_")
+kAdminAndSystemEvents <- kTargetFiles[1]
 # ------ functions ------
 GetHomeDir <- function() {
   os <- Sys.info()["sysname"]
