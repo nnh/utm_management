@@ -30,6 +30,7 @@ JoinReportAndUserInfo <- function(target, itemName, key) {
   return(target)
 }
 JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
+  kUsageStr <- "Usage: "
   tableName <- tableInfo$tableName
   targetItemAndColumn <- tableInfo$targetItemAndColumn
   targetTable <- tables[[tableName]]
@@ -40,8 +41,23 @@ JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
     if (tableName == kAdminAndSystemEvents) {
       targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
     }
+    if (tableName == kUserReport & !is.null(columnName)) {
+      targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
+      usage_str <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% 
+        str_extract(str_c(kUsageStr, "[0-9.]+ [A-Za-z]+")) %>% str_remove(kUsageStr)
+      rank_str <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_split_i(":", 1)
+      targetTable[[itemName]]$usage <- usage_str
+      targetTable[[itemName]][[columnName]] <- rank_str
+    }
     targetTable <- targetTable %>% JoinReportAndUserInfo(itemName, key)
+    if (tableName == kUserReport & is.null(columnName)) {
+      targetTable[[itemName]]$user <- NULL
+      targetTable[[itemName]]$description <- NULL
+      targetTable[[itemName]]$macAddress <- NULL
+      targetTable[[itemName]] <- targetTable[[itemName]] %>% rename("destinationHost"="hostName")
+    }
   }
+
   tables[[tableName]] <- targetTable
   return(tables)
 }
@@ -90,7 +106,8 @@ SetTableInfo <- function() {
   target[[5]]$targetItemAndColumn <- kListOfTerminalsTarget
   target[[6]]$targetItemAndColumn <- kListOfTerminalsTarget
   target[[7]]$targetItemAndColumn <- list(
-    list(itemName="top10Destinations", columnName=NULL, key=c("Destination"="ip"))
+    list(itemName="top10Destinations", columnName=NULL, key=c("Destination"="ip")),
+    list(itemName="top10Destinations", columnName="rank", key="ip")
   )
   return(target)
 }
@@ -120,4 +137,7 @@ for (i in 1:length(tablesJoinUserInfo)) {
     tablesJoinUserInfo[[i]][[j]] <- tablesJoinUserInfo[[i]][[j]] %>% select(where(~ !all(is.na(.))))
   }
 }
+tablesJoinUserInfo$`User Report without guest`$top10Destinations <- tablesJoinUserInfo$`User Report without guest`$top10Destinations %>% 
+  select(all_of(c("rank", "usage", "ip", "hostName", "user", "description", "macAddress", 
+                  "Destination", "destinationHost", "Bandwidth", "Application")))
 tablesJoinUserInfo %>% CreateOutputWorkbook()

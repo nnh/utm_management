@@ -10,7 +10,6 @@ library(tidyverse)
 library(xml2)
 # ------ constants ------
 kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
-kUserReport <- "User Report without guest"
 kTrafficSummary <- "Traffic Summary"
 kTargetFiles <- c("Admin and System Events Report", 
                   "Bandwidth and Applications Report without guest", 
@@ -20,6 +19,7 @@ kTargetFiles <- c("Admin and System Events Report",
                   "List of terminals connected vpn", 
                   "User Report without guest") 
 kAdminAndSystemEvents <- kTargetFiles[1]
+kUserReport <- kTargetFiles[7]
 # ------ functions ------
 GetHomeDir <- function() {
   os <- Sys.info()["sysname"]
