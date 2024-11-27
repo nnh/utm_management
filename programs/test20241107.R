@@ -6,11 +6,11 @@
 rm(list=ls())
 # ------ libraries ------
 library(here)
-library(openxlsx)
 # ------ constants ------
 source(here("programs", "test_common.R"), encoding="UTF-8")
 source(here("programs", "test_get_xml.R"), encoding="UTF-8")
 source(here("programs", "get_device_list.R"), encoding="UTF-8")
+source(here("programs", "write_workbook.R"), encoding="UTF-8")
 kOutputFilename <- "不正アクセスチェックレポート "
 # ------ functions ------
 GetIpAddressesAndDomains <- function(tables) {
@@ -120,41 +120,4 @@ for (i in 1:length(tablesJoinUserInfo)) {
     tablesJoinUserInfo[[i]][[j]] <- tablesJoinUserInfo[[i]][[j]] %>% select(where(~ !all(is.na(.))))
   }
 }
-output_wb <- createWorkbook()
-kTitleStyle <- createStyle(fontName="Calibri", fontSize=18)
-kHeaderStyle <- createStyle(fontName="Calibri", fontSize=16)
-kBodyStyle <- createStyle(fontName="Calibri", fontSize=11)
-WriteDataToWorkbook <- function(wb, sheetname, table, currentRow) {
-  outputRow <- currentRow + 2
-  for (i in 1:length(table)) {
-    outputDf <- table[[i]]
-    names(table)[[i]] %>% writeData(wb, sheet=sheetname, x=., withFilter=F, startRow=outputRow, sep="\t")
-    addStyle(wb, sheet=sheetname, kHeaderStyle, rows=outputRow, cols=1)
-    outputRow <- outputRow + 1
-    outputDf %>% writeData(wb, sheet=sheetname, x=., withFilter=F, startRow=outputRow, sep="\t")
-    outputRow <- outputRow + nrow(outputDf) + 2
-  }
-  
-}
-for (i in 1:length(tablesJoinUserInfo)) {
-  outputReportName <- names(tablesJoinUserInfo)[i]
-  outputTableList <- tablesJoinUserInfo[[i]]
-  outputRow <- 1
-  addWorksheet(output_wb, i)
-  outputReportName %>% writeData(output_wb, sheet=i, x=., withFilter=F, startRow=outputRow, sep="\t")  
-  addStyle(output_wb, sheet=i, kBodyStyle, rows=1:110, cols=1:8, gridExpand=T)
-  addStyle(output_wb, sheet=i, kTitleStyle, rows=outputRow, cols=1)
-  WriteDataToWorkbook(output_wb, i, outputTableList, outputRow)
-}
-saveWorkbook(output_wb, str_c(output_path, "/", kOutputFilename, yyyymm, ".xlsx"), overwrite=T)  
-
-  titles <- names(tables)
-  i <- 1
-  sheetname <- titles[i]
-  addWorksheet(output_wb, sheetname)
-  outputRow <- 1
-  writeData(output_wb, sheet=sheetname, x=titles[i], withFilter=F, startRow=outputRow, sep="\t")  
-  outputRow <- outputRow + 1
-  writeData(output_wb, sheet=sheetname, x=tablesJoinUserInfo[[i]][[1]], withFilter=F, sep="\t", startRow=outputRow, colNames=F)
-  saveWorkbook(output_wb, str_c(output_path, "/", kOutputFilename, yyyymm, ".xlsx"), overwrite=T)  
-  
+tablesJoinUserInfo %>% CreateOutputWorkbook()
