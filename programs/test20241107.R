@@ -121,21 +121,34 @@ for (i in 1:length(tablesJoinUserInfo)) {
   }
 }
 output_wb <- createWorkbook()
+kTitleStyle <- createStyle(fontName="Calibri", fontSize=18)
+kHeaderStyle <- createStyle(fontName="Calibri", fontSize=16)
+kBodyStyle <- createStyle(fontName="Calibri", fontSize=11)
+WriteDataToWorkbook <- function(wb, sheetname, table, currentRow) {
+  outputRow <- currentRow + 2
+  for (i in 1:length(table)) {
+    outputDf <- table[[i]]
+    names(table)[[i]] %>% writeData(wb, sheet=sheetname, x=., withFilter=F, startRow=outputRow, sep="\t")
+    addStyle(wb, sheet=sheetname, kHeaderStyle, rows=outputRow, cols=1)
+    outputRow <- outputRow + 1
+    outputDf %>% writeData(wb, sheet=sheetname, x=., withFilter=F, startRow=outputRow, sep="\t")
+    outputRow <- outputRow + nrow(outputDf) + 2
+  }
+  
+}
 for (i in 1:length(tablesJoinUserInfo)) {
   outputReportName <- names(tablesJoinUserInfo)[i]
   outputTableList <- tablesJoinUserInfo[[i]]
   outputRow <- 1
   addWorksheet(output_wb, i)
   outputReportName %>% writeData(output_wb, sheet=i, x=., withFilter=F, startRow=outputRow, sep="\t")  
-  for (j in 1:length(outputTableList)) {
-    title <- names(outputTableList)[[j]]
-    outputDf <- outputTableList[[j]]
-  }
+  addStyle(output_wb, sheet=i, kBodyStyle, rows=1:110, cols=1:8, gridExpand=T)
+  addStyle(output_wb, sheet=i, kTitleStyle, rows=outputRow, cols=1)
+  WriteDataToWorkbook(output_wb, i, outputTableList, outputRow)
 }
 saveWorkbook(output_wb, str_c(output_path, "/", kOutputFilename, yyyymm, ".xlsx"), overwrite=T)  
 
   titles <- names(tables)
-  header_style <- createStyle(fontSize=16)
   i <- 1
   sheetname <- titles[i]
   addWorksheet(output_wb, sheetname)
