@@ -1,6 +1,6 @@
 #' title
 #' description
-#' @file xxx.R
+#' @file get_config.R
 #' @author Mariko Ohtsuka
 #' @date YYYY.MM.DD
 rm(list=ls())

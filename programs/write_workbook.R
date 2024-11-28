@@ -31,6 +31,7 @@ CreateOutputWorkbook <- function(tables) {
     outputReportName %>% writeData(output_wb, sheet=i, x=., withFilter=F, startRow=outputRow, sep="\t")  
     addStyle(output_wb, sheet=i, kBodyStyle, rows=1:110, cols=1:8, gridExpand=T)
     addStyle(output_wb, sheet=i, kTitleStyle, rows=outputRow, cols=1)
+    pageSetup(output_wb, sheet=i, orientation="landscape", fitToWidth=T, fitToHeight=F)
     WriteDataToWorkbook(output_wb, i, outputTableList, outputRow)
   }
   setColWidths(output_wb, "1", cols=1:7, widths=c(50, 30, 30, 40, 25, 17, 20))

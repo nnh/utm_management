@@ -1,6 +1,6 @@
 #' title
 #' description
-#' @file xxx.R
+#' @file get_set_sheet.R
 #' @author Mariko Ohtsuka
 #' @date YYYY.MM.DD
 rm(list=ls())
@@ -9,6 +9,8 @@ library(here)
 # ------ constants ------
 # ------ functions ------
 # ------ main ------
+source(here("programs", "get_config.R"), encoding="UTF-8")
+rm(list=ls())
 source(here("programs", "test_common.R"), encoding="UTF-8")
 gs4_auth(
   email = gargle::gargle_oauth_email(),
@@ -24,3 +26,5 @@ excludedUrl <- addressList %>% filter(ID=="excluded") %>% .$Item
 blockedMacAddressTable <- excludedUrl %>% read_sheet(sheet="blockedDevices")
 whitelistTable <- excludedUrl %>% read_sheet(sheet="whitelist")
 dummy <- c("fortiGateUserInfo","sinetTable", "staticIpTable", "blockedMacAddressTable", "whitelistTable") %>% map( ~ TableWriteJson(.))
+blackList <- here(ext_path, "writeSsblackList.json") %>% fromJSON()
+write_sheet(excludedUrl, sheet="")
