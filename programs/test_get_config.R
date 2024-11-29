@@ -1,5 +1,5 @@
-#' title
-#' description
+#' Extracting Key Information from Configuration Files and Exporting to JSON
+#' This program reads configuration files to extract specific information and outputs the results in a structured JSON format. 
 #' @file get_config.R
 #' @author Mariko Ohtsuka
 #' @date YYYY.MM.DD
@@ -8,6 +8,7 @@ rm(list=ls())
 library(here)
 # ------ constants ------
 source(here("programs", "test_common.R"), encoding="UTF-8")
+kSetInterFace <- "set interface "
 # ------ functions ------
 GetBlackList <- function() {
   blackList <- tibble(ip=character(), hostName=character(), macAddress=character())
@@ -36,6 +37,10 @@ GetBlackList <- function() {
   } 
   return(blackList)
 }
+GetInterFace <- function(inputStr) {
+  interFace <- inputStr %>% str_remove(kSetInterFace) %>% str_remove_all('"') %>% trimws()
+  return(interFace)
+}
 GetBlockedMacAddress <- function() {
   dhcpSectionStart <- NA
   dhcpSectionEnd <- NA
@@ -53,8 +58,8 @@ GetBlockedMacAddress <- function() {
   blockedMacAddress <- list()
   temp <- list()
   for (i in 1:length(dhcpSection)) {
-    if (str_detect(dhcpSection[i], "set interface ")) {
-      interFace <- dhcpSection[i] %>% str_remove("set interface ") %>% str_remove_all('"') %>% trimws()
+    if (str_detect(dhcpSection[i], kSetInterFace)) {
+      interFace <- dhcpSection[i] %>% GetInterFace()
     }
     if (str_detect(dhcpSection[i], "config reserved-address")) {
       blocked_f <- T
@@ -83,9 +88,67 @@ GetBlockedMacAddress <- function() {
   }
   return(blockedMacAddress)
 }
+GetDhcpRange <- function() {
+  dhcpConfigStart <- NA
+  dhcpConfigEnd <- NA
+  for (i in 1:length(configFile)) {
+    if (str_detect(configFile[i], "config system dhcp server")) {
+      dhcpConfigStart <- i
+    }
+    if (!is.na(dhcpConfigStart) & str_detect(configFile[i], "^end")) {
+      dhcpConfigEnd <- i
+      break
+    }
+  }
+  if (is.na(dhcpConfigStart) | is.na(dhcpConfigEnd)) {
+    stop("Failed to obtain DHCP address range.")
+  }
+  dhcpConfig <- configFile[dhcpConfigStart:dhcpConfigEnd]
+  interface <- NA
+  startIp <- NA
+  endIp <- NA
+  dhcpIpList <- list()
+  for (i in 1:length(dhcpConfig)) {
+    if (str_detect(dhcpConfig[i], kSetInterFace)) {
+      interface <- dhcpConfig[i] %>% GetInterFace()
+    }
+    if (str_detect(dhcpConfig[i], "set start-ip ")) {
+      startIp <- dhcpConfig[i] %>% str_remove("set start-ip ") %>% trimws()
+    }
+    if (str_detect(dhcpConfig[i], "set end-ip ")) {
+      endIp <- dhcpConfig[i] %>% str_remove("set end-ip ") %>% trimws()
+    }
+    if (!is.na(startIp) & !is.na(endIp)) {
+      start_num <- IpToNumber(startIp)
+      end_num <- IpToNumber(endIp)
+      ip_list <- map_chr(start_num:end_num, NumberToIp)
+      dhcpIpList[[interface]] <- ip_list
+      startIp <- NA
+      endIp <- NA
+    }
+  }
+  return(dhcpIpList)
+}
+IpToNumber <- function(ip) {
+  parts <- as.numeric(unlist(strsplit(ip, "\\.")))
+  sum(parts * c(2^24, 2^16, 2^8, 1))
+}
 
+NumberToIp <- function(number) {
+  parts <- c(
+    number %/% 2^24,
+    (number %% 2^24) %/% 2^16,
+    (number %% 2^16) %/% 2^8,
+    number %% 2^8
+  )
+  paste(parts, collapse = ".")
+}
 # ------ main ------
 blackList <- GetBlackList()
 writeSsblackList <- blackList %>% select("IP"="ip", "Description"="hostName") %>% arrange("Description")
 blockedMacAddressFromConfig <- GetBlockedMacAddress()
-dummy <- c('blackList', 'writeSsblackList', 'blockedMacAddressFromConfig') %>% map( ~ TableWriteJson(.))
+dhcpIpRangeList <- GetDhcpRange()
+dummy <- c('blackList', 'writeSsblackList', 'blockedMacAddressFromConfig', 'dhcpIpRangeList') %>% 
+  map( ~ TableWriteJson(.))
+
+
