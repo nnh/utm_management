@@ -67,10 +67,13 @@ GetStaticIpFromJson <- function() {
 setDeviceHostName <- function(deviceList) {
   privateAddresses <- deviceList %>% filter(!is.na(macAddress)) %>% select(-c("user", "description"))
   publicAddresses <- deviceList %>% filter(is.na(macAddress))
-  privateHostNames <- privateAddresses$hostName %>% unique() %>% tibble(hostName=.)
+  privateHostNames <- privateAddresses$hostName %>% unique() %>% tibble(hostName=., key=tolower(.))
   sinetTable <- "sinetTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% filter(is.na(廃棄日)) %>% 
     select(c("user"="使用者名", "hostName"="コンピュータ名", "description"="部署名")) 
-  privateHostNameAndUser <- privateHostNames %>% left_join(sinetTable, by="hostName")
+  sinetTable$key <- sinetTable$hostName %>% tolower()
+  sinetTable$hostName <- NULL
+  privateHostNameAndUser <- privateHostNames %>% left_join(sinetTable, by="key")
+  privateHostNameAndUser$key <- NULL
   privateAddresseInfo <- privateHostNameAndUser %>% inner_join(privateAddresses, by="hostName", relationship = "many-to-many") 
   res <- privateAddresseInfo %>% bind_rows(publicAddresses) %>% arrange("ip")
   return(res)
