@@ -7,7 +7,7 @@ rm(list=ls())
 # ------ libraries ------
 library(here)
 # ------ constants ------
-source(here("programs", "test_common.R"), encoding="UTF-8")
+source(here("programs", "common.R"), encoding="UTF-8")
 kSetInterFace <- "set interface "
 # ------ functions ------
 GetBlackList <- function() {
@@ -90,7 +90,15 @@ GetBlockedMacAddress <- function() {
       }
     }
   }
-  return(blockedMacAddress)
+  df <- data.frame()
+  blockedMacAddressColnames <- blockedMacAddress %>% map( ~ names(.)) %>% unique() %>% list_c()
+  for (row in 1:length(blockedMacAddress)) {
+    for (col in 1:length(blockedMacAddress[[row]])) {
+      df[row, col] <- blockedMacAddress[[row]][[col]]
+    }
+  }
+  colnames(df) <- blockedMacAddressColnames
+  return(df)
 }
 GetDhcpRange <- function() {
   dhcpConfigStart <- NA
@@ -142,5 +150,5 @@ blackList <- GetBlackList()
 writeSsblackList <- blackList %>% select("IP"="ip", "Description"="hostName") %>% arrange("Description")
 blockedMacAddressFromConfig <- GetBlockedMacAddress()
 dhcpIpRange <- GetDhcpRange()
-dummy <- c('blackList', 'writeSsblackList', 'blockedMacAddressFromConfig', 'dhcpIpRange') %>% 
+dummy <- c(kBlackList, kWriteBlackList, kBlockedMacAddress, kDhcpIpRange) %>% 
   map( ~ TableWriteJson(.))

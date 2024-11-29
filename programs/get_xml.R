@@ -1,8 +1,10 @@
-#' title
-#' description
-#' @file xxx.R
+#' Process XML Data for Report Generation
+#' This script reads and processes XML files to generate reports based on predefined structures. 
+#' It includes functions to validate the presence of required input files, extract relevant data from XML tables, 
+#' and compile them into structured lists for further processing. 
+#' @file get_xml.R
 #' @author Mariko Ohtsuka
-#' @date YYYY.MM.DD
+#' @date 2024.11.29
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------

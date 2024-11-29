@@ -1,17 +1,10 @@
 #' title
 #' description
-#' @file xxx.R
+#' @file main_function.R
 #' @author Mariko Ohtsuka
 #' @date YYYY.MM.DD
-rm(list=ls())
 # ------ libraries ------
-library(here)
 # ------ constants ------
-source(here("programs", "test_common.R"), encoding="UTF-8")
-source(here("programs", "test_get_xml.R"), encoding="UTF-8")
-source(here("programs", "get_device_list.R"), encoding="UTF-8")
-source(here("programs", "write_workbook.R"), encoding="UTF-8")
-kOutputFilename <- "不正アクセスチェックレポート "
 # ------ functions ------
 GetIpAddressesAndDomains <- function(tables) {
   tables_vec <- tables %>% map( ~ {
@@ -57,7 +50,7 @@ JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
       targetTable[[itemName]] <- targetTable[[itemName]] %>% rename("destinationHost"="hostName")
     }
   }
-
+  
   tables[[tableName]] <- targetTable
   return(tables)
 }
@@ -71,6 +64,12 @@ SetDhcpReleased <- function(userInfo) {
   res <- others %>% bind_rows(dhcpReleased) 
   res <- res %>% arrange("ip")
   return(res)    
+}
+SetUnregistered <- function(userInfo) {
+  userInfo$user <- ifelse(!is.na(userInfo$hostName) & !is.na(userInfo$macAddress) & is.na(userInfo$user),
+                          kUnregistered, 
+                          userInfo$user)
+  return(userInfo)
 }
 JoinUserInfo <- function(ipAddresses, deviceList) {
   # domain
@@ -93,6 +92,7 @@ JoinUserInfo <- function(ipAddresses, deviceList) {
   userIpInfo <- ipList %>% left_join(deviceIpList, by="ip")
   userIpAndDomainInfo <- userIpInfo %>% bind_rows(userDomainInfo)
   res <- userIpAndDomainInfo %>% SetDhcpReleased()
+  res <- res %>% SetUnregistered()
   return(res)
 }
 SetTableInfo <- function() {
@@ -122,26 +122,11 @@ SetTableInfo <- function() {
   )
   return(target)
 }
-# ------ main ------
-utm_dir_name <- str_c("UTM Logs ", yyyymm)
-input_path <- home_dir %>% file.path("Downloads", "input")
-output_path <- home_dir %>% file.path("Downloads", "output")
-if (file.exists(output_path) == F) {
-  dir.create(output_path)
-}
-tables <- input_path %>% GetInputTables()
-ipAddresses <- tables %>% GetIpAddressesAndDomains()
-deviceList <- GetDeviceList()
-userInfo <- JoinUserInfo(ipAddresses, deviceList)
-tableInfoList <- SetTableInfo()
-tablesJoinUserInfo <- tables
-for (i in 1:length(tablesJoinUserInfo)) {
-  tablesJoinUserInfo <- tableInfoList[[i]] %>% JoinReportAndUserInfoByTable(tablesJoinUserInfo, .)
-  for (j in 1:length(tablesJoinUserInfo[[i]])) {
-    tablesJoinUserInfo[[i]][[j]] <- tablesJoinUserInfo[[i]][[j]] %>% select(where(~ !all(is.na(.))))
+GetOutputPath <- function(parent_path) {
+  output_path <- parent_path %>% file.path("output")
+  if (file.exists(output_path) == F) {
+    dir.create(output_path)
   }
+  return(output_path)
 }
-tablesJoinUserInfo$`User Report without guest`$top10Destinations <- tablesJoinUserInfo$`User Report without guest`$top10Destinations %>% 
-  select(all_of(c("rank", "usage", "ip", "hostName", "user", "description", "macAddress", 
-                  "Destination", "destinationHost", "Bandwidth", "Application")))
-tablesJoinUserInfo %>% CreateOutputWorkbook()
+# ------ main ------

@@ -11,7 +11,7 @@ library(jsonlite)
 kMonthAbbr <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 # ------ functions ------
-source(here("programs", "test_common.R"), encoding="UTF-8")
+source(here("programs", "common.R"), encoding="UTF-8")
 GetYm <- function(targetDate) {
   year <- targetDate %>% year()
   month <- targetDate %>% month()
