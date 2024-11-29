@@ -2,7 +2,7 @@
 #' This program reads configuration files to extract specific information and outputs the results in a structured JSON format. 
 #' @file get_config.R
 #' @author Mariko Ohtsuka
-#' @date YYYY.MM.DD
+#' @date 2024.11.29
 rm(list=ls())
 # ------ libraries ------
 library(here)
@@ -26,7 +26,7 @@ GetBlackList <- function() {
             trimws()
         }
         if (str_detect(configFile[temp_row], "set fqdn")) {
-          blackList[blackListRow, "ip"] <- configFile[temp_row] %>% str_remove("set fqdn ") %>% str_remove_all('"') %>% trimws()
+          blackList[blackListRow, "ip"] <- configFile[temp_row] %>% GetConfigValue("set fqdn ")
         }
         if (str_detect(configFile[temp_row], "next")) {
           break
@@ -37,8 +37,12 @@ GetBlackList <- function() {
   } 
   return(blackList)
 }
+GetConfigValue <- function(inputStr, removeStr) {
+  res <- inputStr %>% str_remove(removeStr) %>% str_remove_all('"') %>% trimws()
+  return(res)
+}
 GetInterFace <- function(inputStr) {
-  interFace <- inputStr %>% str_remove(kSetInterFace) %>% str_remove_all('"') %>% trimws()
+  interFace <- GetConfigValue(inputStr, kSetInterFace)
   return(interFace)
 }
 GetBlockedMacAddress <- function() {
@@ -73,13 +77,13 @@ GetBlockedMacAddress <- function() {
       } else {
         if (str_detect(dhcpSection[i], "set ")) {
           if (str_detect(dhcpSection[i], "set mac ")) {
-            temp$macAddress <- dhcpSection[i] %>% str_remove("set mac ") %>% trimws()
+            temp$macAddress <- dhcpSection[i] %>% GetConfigValue("set mac ")
           }
           if (str_detect(dhcpSection[i], "set action block")) {
-            temp$action <- dhcpSection[i] %>% str_remove("set action ") %>% trimws()
+            temp$action <- dhcpSection[i] %>% GetConfigValue("set action ")
           } 
           if (str_detect(dhcpSection[i], "set description ")) {
-            temp$description <- dhcpSection[i] %>% str_remove("set description ") %>% str_remove_all('"') %>% trimws()
+            temp$description <- dhcpSection[i] %>% GetConfigValue("set description ")
           } 
           
         }
@@ -113,10 +117,10 @@ GetDhcpRange <- function() {
       interface <- dhcpConfig[i] %>% GetInterFace()
     }
     if (str_detect(dhcpConfig[i], "set start-ip ")) {
-      startIp <- dhcpConfig[i] %>% str_remove("set start-ip ") %>% trimws()
+      startIp <- dhcpConfig[i] %>% GetConfigValue("set start-ip ")
     }
     if (str_detect(dhcpConfig[i], "set end-ip ")) {
-      endIp <- dhcpConfig[i] %>% str_remove("set end-ip ") %>% trimws()
+      endIp <- dhcpConfig[i] %>% GetConfigValue("set end-ip ")
     }
     if (!is.na(startIp) & !is.na(endIp)) {
       start_num <- IpToNumber(startIp)
@@ -127,7 +131,12 @@ GetDhcpRange <- function() {
       endIp <- NA
     }
   }
-  return(dhcpIpList)
+  df_dhcp <- map2(
+    names(dhcpIpList),
+    dhcpIpList,
+    ~ tibble(interface=.x, ip=.y)
+  ) %>% bind_rows()
+  return(df_dhcp)
 }
 IpToNumber <- function(ip) {
   parts <- as.numeric(unlist(strsplit(ip, "\\.")))
@@ -147,8 +156,6 @@ NumberToIp <- function(number) {
 blackList <- GetBlackList()
 writeSsblackList <- blackList %>% select("IP"="ip", "Description"="hostName") %>% arrange("Description")
 blockedMacAddressFromConfig <- GetBlockedMacAddress()
-dhcpIpRangeList <- GetDhcpRange()
-dummy <- c('blackList', 'writeSsblackList', 'blockedMacAddressFromConfig', 'dhcpIpRangeList') %>% 
+dhcpIpRange <- GetDhcpRange()
+dummy <- c('blackList', 'writeSsblackList', 'blockedMacAddressFromConfig', 'dhcpIpRange') %>% 
   map( ~ TableWriteJson(.))
-
-

@@ -5,7 +5,6 @@
 #' @date YYYY.MM.DD
 # ------ libraries ------
 # ------ constants ------
-kNoDhcpMessage <- "DHCPログのホスト名が空白のため詳細確認不可能"
 # ------ functions ------
 GetDhcp <- function() {
   temp <- file.path(ext_path, "dhcp.txt") %>% read_lines()

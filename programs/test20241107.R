@@ -61,6 +61,16 @@ JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
   tables[[tableName]] <- targetTable
   return(tables)
 }
+SetDhcpReleased <- function(userInfo) {
+  dhcpRange <- fromJSON(file.path(ext_path, "dhcpIpRange.json"))
+  dhcpReleased <- userInfo %>% inner_join(dhcpRange, by="ip") %>% filter(is.na(hostName))
+  dhcpReleased$hostName <- "DHCPリリース済みのため詳細確認不可"
+  dhcpReleased$interface <- NULL
+  others <- userInfo %>% anti_join(dhcpReleased, by="ip")
+  res <- others %>% bind_rows(dhcpReleased) 
+  res <- res %>% arrange("ip")
+  return(res)    
+}
 JoinUserInfo <- function(ipAddresses, deviceList) {
   # domain
   domainList <- ipAddresses %>% filter(!str_detect(ip, kIpAddr))
@@ -77,11 +87,11 @@ JoinUserInfo <- function(ipAddresses, deviceList) {
     res$ip <- target
     return(res)
   })
-  # ip
   ipList <- ipAddresses %>% filter(str_detect(ip, kIpAddr))
   deviceIpList <- deviceList %>% filter(str_detect(ip, kIpAddr))
   userIpInfo <- ipList %>% left_join(deviceIpList, by="ip")
-  res <- userIpInfo %>% bind_rows(userDomainInfo)
+  userIpAndDomainInfo <- userIpInfo %>% bind_rows(userDomainInfo)
+  res <- userIpAndDomainInfo %>% SetDhcpReleased()
   return(res)
 }
 SetTableInfo <- function() {

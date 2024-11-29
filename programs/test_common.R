@@ -20,6 +20,7 @@ kTargetFiles <- c("Admin and System Events Report",
                   "User Report without guest") 
 kAdminAndSystemEvents <- kTargetFiles[1]
 kUserReport <- kTargetFiles[7]
+kNoDhcpMessage <- "DHCPログのホスト名が空白のため詳細確認不可能"
 # ------ functions ------
 GetHomeDir <- function() {
   os <- Sys.info()["sysname"]
