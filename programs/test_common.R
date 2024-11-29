@@ -32,10 +32,23 @@ GetHomeDir <- function() {
   }
   return (home_dir)
 }
+GetVolumeStr <- function() {
+  os <- Sys.info()["sysname"]
+  if (os == "Windows") {
+    volume_str <- "//aronas"
+  } else if (os == "Darwin") {
+    volume_str <- "/Volumes"
+  } else {
+    stop("Unsupported OS")
+  }
+  return (volume_str)
+}
 TableWriteJson <- function(tableName) {
   get(tableName) %>% jsonlite::write_json(file.path(ext_path, str_c(tableName, ".json")))
 }
 # ------ main ------
+#target_yyyymm <- "201906"
+volume_str <- GetVolumeStr()
 home_dir <- GetHomeDir()
 ext_path <- home_dir %>% file.path("Downloads", "ext")
 addressList <- ext_path %>% file.path("sinet.txt") %>% read.csv()
@@ -50,3 +63,9 @@ if (length(configFileName) > 1) {
   stop("Only one configuration file should be stored.")
 }
 configFile <- ext_path %>% file.path(configFileName) %>% read_lines()
+if (exists("target_yyyymm")){
+  yyyymm <- target_yyyymm
+} else{
+  last_month <- as.Date(format(Sys.Date(), "%Y-%m-01")) - 1
+  yyyymm <- str_c(format(last_month, "%Y"), format(last_month, "%m"))
+}

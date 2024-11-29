@@ -112,13 +112,6 @@ SetTableInfo <- function() {
   return(target)
 }
 # ------ main ------
-#target_yyyymm <- "201906"
-if (exists("target_yyyymm")){
-  yyyymm <- target_yyyymm
-} else{
-  last_month <- as.Date(format(Sys.Date(), "%Y-%m-01")) - 1
-  yyyymm <- str_c(format(last_month, "%Y"), format(last_month, "%m"))
-}
 utm_dir_name <- str_c("UTM Logs ", yyyymm)
 input_path <- home_dir %>% file.path("Downloads", "input")
 output_path <- home_dir %>% file.path("Downloads", "output")
