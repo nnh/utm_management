@@ -65,6 +65,7 @@ SetDhcpReleased <- function(userInfo) {
   dhcpRange <- fromJSON(file.path(ext_path, "dhcpIpRange.json"))
   dhcpReleased <- userInfo %>% inner_join(dhcpRange, by="ip") %>% filter(is.na(hostName))
   dhcpReleased$hostName <- "DHCPリリース済みのため詳細確認不可"
+  dhcpReleased$user <- dhcpReleased$hostName
   dhcpReleased$interface <- NULL
   others <- userInfo %>% anti_join(dhcpReleased, by="ip")
   res <- others %>% bind_rows(dhcpReleased) 

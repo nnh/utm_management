@@ -46,6 +46,11 @@ GetDeviceList <- function() {
     ungroup()
   uniqueDeviceList$tempSeq <-NULL
   deviceListHostName <- uniqueDeviceList %>% setDeviceHostName()
+  vpn <- file.path(ext_path, "vpn.json") %>% fromJSON()
+  if (nrow(vpn) > 0) {
+    vpn$hostName <- "VPN接続"
+    deviceListHostName <- deviceListHostName %>% bind_rows(vpn)
+  }
   vpnLocalIp <- file.path(ext_path, "vpnLocalIp.json") %>% fromJSON()
   if (length(vpnLocalIp) > 0) {
     df_vpnLocalIp <- tibble(ip=vpnLocalIp)
@@ -76,6 +81,7 @@ setDeviceHostName <- function(deviceList) {
   privateHostNameAndUser$key <- NULL
   privateAddresseInfo <- privateHostNameAndUser %>% inner_join(privateAddresses, by="hostName", relationship = "many-to-many") 
   res <- privateAddresseInfo %>% bind_rows(publicAddresses) %>% arrange("ip")
+  res$user <- ifelse(res$hostName == kNoDhcpMessage, kNoDhcpMessage, res$user)
   return(res)
 }
 # ------ main ------
