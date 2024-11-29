@@ -47,6 +47,26 @@ GetVolumeStr <- function() {
 TableWriteJson <- function(tableName) {
   get(tableName) %>% jsonlite::write_json(file.path(ext_path, str_c(tableName, ".json")))
 }
+GetIpRangeList <- function(startIp, endIp) {
+  start_num <- IpToNumber(startIp)
+  end_num <- IpToNumber(endIp)
+  ip_list <- map_chr(start_num:end_num, NumberToIp)
+  return(ip_list)  
+}
+IpToNumber <- function(ip) {
+  parts <- as.numeric(unlist(strsplit(ip, "\\.")))
+  sum(parts * c(2^24, 2^16, 2^8, 1))
+}
+
+NumberToIp <- function(number) {
+  parts <- c(
+    number %/% 2^24,
+    (number %% 2^24) %/% 2^16,
+    (number %% 2^16) %/% 2^8,
+    number %% 2^8
+  )
+  paste(parts, collapse = ".")
+}
 # ------ main ------
 #target_yyyymm <- "201906"
 volume_str <- GetVolumeStr()

@@ -46,6 +46,12 @@ GetDeviceList <- function() {
     ungroup()
   uniqueDeviceList$tempSeq <-NULL
   deviceListHostName <- uniqueDeviceList %>% setDeviceHostName()
+  vpnLocalIp <- file.path(ext_path, "vpnLocalIp.json") %>% fromJSON()
+  if (length(vpnLocalIp) > 0) {
+    df_vpnLocalIp <- tibble(ip=vpnLocalIp)
+    df_vpnLocalIp$hostName <- "vpn user"
+    deviceListHostName <- deviceListHostName %>% bind_rows(df_vpnLocalIp)
+  }
   res <- deviceListHostName %>% arrange(ip)
   return(res)
 }

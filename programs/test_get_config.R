@@ -123,9 +123,7 @@ GetDhcpRange <- function() {
       endIp <- dhcpConfig[i] %>% GetConfigValue("set end-ip ")
     }
     if (!is.na(startIp) & !is.na(endIp)) {
-      start_num <- IpToNumber(startIp)
-      end_num <- IpToNumber(endIp)
-      ip_list <- map_chr(start_num:end_num, NumberToIp)
+      ip_list <- GetIpRangeList(startIp, endIp)
       dhcpIpList[[interface]] <- ip_list
       startIp <- NA
       endIp <- NA
@@ -138,20 +136,7 @@ GetDhcpRange <- function() {
   ) %>% bind_rows()
   return(df_dhcp)
 }
-IpToNumber <- function(ip) {
-  parts <- as.numeric(unlist(strsplit(ip, "\\.")))
-  sum(parts * c(2^24, 2^16, 2^8, 1))
-}
 
-NumberToIp <- function(number) {
-  parts <- c(
-    number %/% 2^24,
-    (number %% 2^24) %/% 2^16,
-    (number %% 2^16) %/% 2^8,
-    number %% 2^8
-  )
-  paste(parts, collapse = ".")
-}
 # ------ main ------
 blackList <- GetBlackList()
 writeSsblackList <- blackList %>% select("IP"="ip", "Description"="hostName") %>% arrange("Description")

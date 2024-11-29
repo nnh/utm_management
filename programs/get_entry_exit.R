@@ -42,15 +42,14 @@ GetVpnLog <- function() {
   vpn_files <- targetVpnFiles %>% map_df( ~ read_lines(.) %>% tibble(v1=.))
   return(vpn_files)
 }
-EditVpnLog <- function(vpn_files) {
-  kTargetStr <- c("connected from", "Call detected from user")  
-  targetVpnRows <- vpn_files %>%
+GetTargetVpnList <- function(vpn_files, kTargetStr){  
+  targetVpnRows <- vpn_files %>% 
     filter(str_detect(v1, str_c(kTargetStr, collapse = "|")))
   targetVpnList <- targetVpnRows$v1 %>% str_split("\\s+")
   targetVpnList <- targetVpnList %>% map( ~ {
     res <- .
     month <- res[1] %>% unlist() %>% match(kMonthAbbr)
-    if (month %in% targetMonth) {
+    if (month %in% targetMonth[1]) {
       res[1] <- month
       return(res)
     } else {
@@ -61,7 +60,11 @@ EditVpnLog <- function(vpn_files) {
     res <- t(.) %>% data.frame()
     return(res)
   }) %>% bind_rows() %>% arrange(X1, X2)
-  vpn <- temp
+  return(temp)
+}
+
+EditVpnLog <- function(vpn_files, kTargetStr) {
+  vpn <- GetTargetVpnList(vpn_files, kTargetStr)
   for (i in 1:(nrow(vpn)-1)) {
     if (is.na(vpn[i, "X10"]) & !is.na(vpn[i + 1, "X10"])) {
       vpn[i, "X10"] <- vpn[i + 1, "X10"]
@@ -70,11 +73,18 @@ EditVpnLog <- function(vpn_files) {
   vpn <- vpn %>% filter(X7 == "connected") %>% select(c("ip"="X9", "user"="X10")) %>% distinct()
   return(vpn)
 }
+GetVpnLocalIp <- function(vpn_files, kTargetStr) {
+  vpn <- GetTargetVpnList(vpn_files, kTargetStr)
+  ip <- vpn$X11 %>% str_remove("\\)")
+  res <- ip %>% unique()
+  return(res)
+}
 # ------ main ------
 currentYm <- GetCurrentMonth(str_sub(yyyymm, 1, 4), str_sub(yyyymm, 5, 6))
 previousYm <- GetPreviousMonth(str_sub(yyyymm, 1, 4), str_sub(yyyymm, 5, 6))
 targetYm <- c(currentYm, previousYm, "^.*access.log$")
 targetMonth <- c(currentYm, previousYm) %>% str_sub(5, 6) %>% as.numeric()
 vpn_files <- GetVpnLog()
-vpn <- vpn_files %>% EditVpnLog
-vpn %>% write_json(file.path(ext_path, "vpn.json"))
+vpnLocalIp <- c("PPP/IPCP up") %>% GetVpnLocalIp(vpn_files, .)
+vpn <- c("connected from", "Call detected from user") %>% EditVpnLog(vpn_files, .)
+dummy <- c('vpnLocalIp', 'vpn') %>% map( ~ TableWriteJson(.))
