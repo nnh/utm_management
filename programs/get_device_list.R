@@ -1,28 +1,47 @@
-#' title
-#' description
-#' @file xxx.R
+#' Script to obtain device information.
+#' 
+#' @file get_device_list.R
 #' @author Mariko Ohtsuka
-#' @date YYYY.MM.DD
+#' @date 2024.12.2
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
+ReadDhcpTxt <- function(dhcpInputPath, dhcpFileEncoding, dhcpFileName){
+  return (read.delim(dhcpInputPath, header=F, as.is=T, fileEncoding=dhcpFileEncoding,　encoding = "UTF-8"))
+}
 GetDhcp <- function() {
-  temp <- file.path(ext_path, "dhcp.txt") %>% read_lines()
-  if (!exists("temp")) {
+  dhcpFileName <- 'dhcp.txt'
+  dhcpFileEncoding <- 'utf-8'
+  dhcpInputPath <- file.path(ext_path, "dhcp.txt")
+  tryCatch(
+    expr = {
+      list_dhcp <<- ReadDhcpTxt(dhcpInputPath, dhcpFileEncoding, dhcpFileName)
+      dhcp <- list_dhcp %>% 
+        trimws() %>% 
+        str_extract(str_c("^", kIpAddr, ".*$")) %>% 
+        na.omit() %>%
+        str_split("\t")
+      df_dhcp <- dhcp %>% map( ~ {
+        ip <- .[1]
+        macAddress <- .[3]
+        hostName <- ifelse(.[4] == "", kNoDhcpMessage, .[4])
+        res <- tibble(ip, macAddress, hostName)
+        return(res)
+      }) %>% bind_rows()
+    },
+    warning = function(e) {
+      dhcpFileEncoding <- 'utf-16'
+      temp <- ReadDhcpTxt(dhcpInputPath, dhcpFileEncoding, dhcpFileName)
+      ip <- temp$V1 %>% trimws()
+      macAddress <- temp$V3
+      hostName <- ifelse(temp$V4 == "", kNoDhcpMessage, temp$V4)
+      temp_tibble <- tibble(ip, macAddress, hostName)
+      df_dhcp <<- temp_tibble %>% filter(str_detect(ip, kIpAddr))
+    }
+  )
+  if (!exists("df_dhcp")) {
     stop("dhcp.txt is missing.")
   }
-  dhcp <- temp %>% 
-    trimws() %>% 
-    str_extract(str_c("^", kIpAddr, ".*$")) %>% 
-    na.omit() %>%
-    str_split("\t")
-  df_dhcp <- dhcp %>% map( ~ {
-    ip <- .[1]
-    macAddress <- .[3]
-    hostName <- ifelse(.[4] == "", kNoDhcpMessage, .[4])
-    res <- tibble(ip, macAddress, hostName)
-    return(res)
-  }) %>% bind_rows()
   return(df_dhcp)
 }
 
@@ -38,7 +57,7 @@ GetDeviceList <- function() {
   whois <- file.path(ext_path, "whois.csv") %>% read_csv(show_col_types=F) %>% rename("hostName"="User", "macAddress"="MAC_Address") %>% 
     select("ip", "hostName", "macAddress")
   deviceList <- deviceList %>% bind_rows(whois)
-  deviceList <- deviceList %>% add_row(ip="127.0.0.1", hostName="localAddress", macAddress=NA)
+  deviceList <- deviceList %>% add_row(ip="127.0.0.1", hostName="localhost", macAddress=NA)
   deviceList$tempSeq <- 1:nrow(deviceList)
   uniqueDeviceList <- deviceList %>%
     group_by(ip) %>%

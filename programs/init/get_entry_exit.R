@@ -2,7 +2,7 @@
 #' This program processes VPN connection log files to extract source IP addresses and corresponding usernames.
 #' @file get_entry_exit.R
 #' @author Mariko Ohtsuka
-#' @date 2024.11.29
+#' @date 2024.12.2
 rm(list=ls())
 # ------ libraries ------
 library(here)
@@ -17,6 +17,13 @@ GetYm <- function(targetDate) {
   month <- targetDate %>% month()
   res <- str_c(year, sprintf("%02d", month))
   return(res)
+}
+GetNextMonth <- function(year, month) {
+  current_date <- ymd(paste(year, month, "01", sep = "-"))
+  next_month  <- current_date %m+% months(1)
+  ym <- next_month %>% GetYm()
+  return(ym)
+  
 }
 GetCurrentMonth <- function(year, month) {
   current_date <- ymd(paste(year, month, "01", sep = "-"))
@@ -82,8 +89,9 @@ GetVpnLocalIp <- function(vpn_files, kTargetStr) {
 # ------ main ------
 currentYm <- GetCurrentMonth(str_sub(yyyymm, 1, 4), str_sub(yyyymm, 5, 6))
 previousYm <- GetPreviousMonth(str_sub(yyyymm, 1, 4), str_sub(yyyymm, 5, 6))
-targetYm <- c(currentYm, previousYm, "^.*access.log$")
-targetMonth <- c(currentYm, previousYm) %>% str_sub(5, 6) %>% as.numeric()
+nextYm <- GetNextMonth(str_sub(yyyymm, 1, 4), str_sub(yyyymm, 5, 6))
+targetYm <- c(currentYm, previousYm, nextYm, "^.*access.log$")
+targetMonth <- c(currentYm, previousYm, nextYm) %>% str_sub(5, 6) %>% as.numeric()
 vpn_files <- GetVpnLog()
 vpnLocalIp <- c("PPP/IPCP up") %>% GetVpnLocalIp(vpn_files, .)
 vpn <- c("connected from", "Call detected from user") %>% EditVpnLog(vpn_files, .)

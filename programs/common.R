@@ -1,8 +1,8 @@
-#' title
-#' description
-#' @file xxx.R
+#' common program
+#' 
+#' @file common.R
 #' @author Mariko Ohtsuka
-#' @date YYYY.MM.DD
+#' @date 2024.12.02
 # ------ libraries ------
 library(googlesheets4)
 library(jsonlite)
@@ -74,9 +74,16 @@ NumberToIp <- function(number) {
 }
 # ------ main ------
 #target_yyyymm <- "201906"
+if (exists("target_yyyymm")){
+  yyyymm <- target_yyyymm
+} else{
+  last_month <- as.Date(format(Sys.Date(), "%Y-%m-01")) - 1
+  yyyymm <- str_c(format(last_month, "%Y"), format(last_month, "%m"))
+}
+utm_dir_name <- str_c("UTM Logs ", yyyymm)
 volume_str <- GetVolumeStr()
-home_dir <- GetHomeDir()
-ext_path <- home_dir %>% file.path("Downloads", "ext")
+home_dir <- str_c(volume_str, "/Archives/ISR/SystemAssistant/monthlyOperations/unauthorizedAccessLogs/", utm_dir_name)
+ext_path <- home_dir %>% file.path("ext")
 addressList <- ext_path %>% file.path("sinet.txt") %>% read.csv()
 if (!exists("addressList")) {
   stop("sinet.txt is missing.")
@@ -89,9 +96,3 @@ if (length(configFileName) > 1) {
   stop("Only one configuration file should be stored.")
 }
 configFile <- ext_path %>% file.path(configFileName) %>% read_lines()
-if (exists("target_yyyymm")){
-  yyyymm <- target_yyyymm
-} else{
-  last_month <- as.Date(format(Sys.Date(), "%Y-%m-01")) - 1
-  yyyymm <- str_c(format(last_month, "%Y"), format(last_month, "%m"))
-}

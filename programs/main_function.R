@@ -31,23 +31,26 @@ JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
     itemName <- targetItemAndColumn[[i]]$itemName
     columnName <- targetItemAndColumn[[i]]$columnName
     key <- targetItemAndColumn[[i]]$key
-    if (tableName == kAdminAndSystemEvents) {
-      targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
-    }
-    if (tableName == kUserReport & !is.null(columnName)) {
-      targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
-      usage_str <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% 
-        str_extract(str_c(kUsageStr, "[0-9.]+ [A-Za-z]+")) %>% str_remove(kUsageStr)
-      rank_str <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_split_i(":", 1)
-      targetTable[[itemName]]$usage <- usage_str
-      targetTable[[itemName]][[columnName]] <- rank_str
-    }
-    targetTable <- targetTable %>% JoinReportAndUserInfo(itemName, key)
-    if (tableName == kUserReport & is.null(columnName)) {
-      targetTable[[itemName]]$user <- NULL
-      targetTable[[itemName]]$description <- NULL
-      targetTable[[itemName]]$macAddress <- NULL
-      targetTable[[itemName]] <- targetTable[[itemName]] %>% rename("destinationHost"="hostName")
+    if (nrow(targetTable[[itemName]]) > 0) {
+    
+      if (tableName == kAdminAndSystemEvents) {
+        targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
+      }
+      if (tableName == kUserReport & !is.null(columnName)) {
+        targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
+        usage_str <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% 
+          str_extract(str_c(kUsageStr, "[0-9.]+ [A-Za-z]+")) %>% str_remove(kUsageStr)
+        rank_str <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_split_i(":", 1)
+        targetTable[[itemName]]$usage <- usage_str
+        targetTable[[itemName]][[columnName]] <- rank_str
+      }
+      targetTable <- targetTable %>% JoinReportAndUserInfo(itemName, key)
+      if (tableName == kUserReport & is.null(columnName)) {
+        targetTable[[itemName]]$user <- NULL
+        targetTable[[itemName]]$description <- NULL
+        targetTable[[itemName]]$macAddress <- NULL
+        targetTable[[itemName]] <- targetTable[[itemName]] %>% rename("destinationHost"="hostName")
+      }
     }
   }
   

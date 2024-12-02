@@ -2,7 +2,7 @@
 #' 
 #' @file main.R
 #' @author Mariko Ohtsuka
-#' @date 2024.11.29
+#' @date 2024.12.2
 rm(list=ls())
 # ------ libraries ------
 library(here)
@@ -16,10 +16,8 @@ source(here("programs", "get_device_list.R"), encoding="UTF-8")
 source(here("programs", "write_workbook.R"), encoding="UTF-8")
 source(here("programs", "main_function.R"), encoding="UTF-8")
 # ------ main ------
-utm_dir_name <- str_c("UTM Logs ", yyyymm)
-parent_path <- file.path(home_dir, "Downloads")
-input_path <- parent_path %>% file.path("input")
-output_path <- parent_path %>% GetOutputPath()
+input_path <- home_dir %>% file.path("input")
+output_path <- home_dir %>% GetOutputPath()
 tables <- input_path %>% GetInputTables()
 ipAddresses <- tables %>% GetIpAddressesAndDomains()
 deviceList <- GetDeviceList()
@@ -35,4 +33,6 @@ for (i in 1:length(tablesJoinUserInfo)) {
 tablesJoinUserInfo$`User Report without guest`$top10Destinations <- tablesJoinUserInfo$`User Report without guest`$top10Destinations %>% 
   select(all_of(c("rank", "usage", "ip", "hostName", "user", "description", "macAddress", 
                   "Destination", "destinationHost", "Bandwidth", "Application")))
+tablesJoinUserInfo$`Client Reputation without guest`$`Report Filters(Logic: All)` <- tablesJoinUserInfo$`Client Reputation without guest`$`Report Filters(Logic: All)` %>%
+  filter(Filter_name != "srcip")
 tablesJoinUserInfo %>% CreateOutputWorkbook()
