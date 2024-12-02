@@ -1,8 +1,14 @@
-install.packages('tidyverse')
-install.packages('here')
-install.packages('googlesheets4')
-install.packages('openxlsx')
-install.packages('readxl')
-install.packages('rmarkdown')
-install.packages('knitr')
-install.packages('ggplot2')
+#' Scripts for pre-processing
+#' 
+#' @file init.R
+#' @author Mariko Ohtsuka
+#' @date 2024.11.29
+rm(list=ls())
+# ------ libraries ------
+library(here)
+# ------ constants ------
+# ------ functions ------
+source(here("programs", "init", "get_config.R"), encoding="UTF-8")
+source(here("programs", "init", "get_entry_exit.R"), encoding="UTF-8")
+source(here("programs", "init", "get_set_sheet.R"), encoding="UTF-8")
+# ------ main ------
