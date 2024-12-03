@@ -1,9 +1,18 @@
+#' UTM Log Analysis and Monthly Bandwidth Report Generation Script
+#' This script analyzes UTM (Unified Threat Management) logs to generate a monthly bandwidth usage report.
+#' @file output_bandwidth_report.R
+#' @author Mariko Ohtsuka
+#' @date 2024.12.3
+rm(list=ls())
+# ------ libraries ------
 library(tidyverse)
 library(here)
 library(rmarkdown)
 library(knitr)
 library(ggplot2)
+# ------ constants ------
 kTotalTitle = "Total Bytes Transferred"
+kUtmLog <- "UTM Logs "
 # ------ function ------
 #' @title getTargetRows
 #' @description Return data frame filtered by condition
@@ -49,13 +58,14 @@ getInputCsv <- function(targetFilePath, yyyymm){
   dfTop30 <- dfTop30 %>% select("application", "バンド幅", "bandwidth", "yyyymm") %>% rbind(addTotalRow)
   return(dfTop30)
 }
-#' @title getTargetCsvName
+#' @title getTargetFileName
 #' @description Get the file name of "Bandwidth and Applications Report without guest" for the target year and month.
 #' @param targetPath  Path of the input file
 #' @return String of the file name
-getTargetCsvName <- function(targetPath){
-  temp_filenames <- list.files(targetPath) %>% str_subset("Bandwidth and Applications Report without guest-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}.*csv$")
-  return(temp_filenames)
+getTargetFileName <- function(targetPath){
+  kBandwidthReport <- "Bandwidth and Applications Report without guest-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}"
+  res <- list.files(targetPath) %>% str_subset(kBandwidthReport)
+  return(res)
 }
 #' @title calcByte
 #' @description  Align the units to megabytes.
@@ -73,8 +83,24 @@ calcByte <- function(targetStr){
   temp <- numTarget * unitValue
   return(temp)
 }
+#' @title ReadLog
+#' @param input_file_path : Full path of csv to read
+#' @return String vector
+ReadLog <- function(input_file_path){
+  os <- .Platform$OS.type  # mac or windows
+  con <- file(description=input_file_path, open="rt")
+  if (os == "unix"){
+    lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "utf-8")
+  } else{
+    #lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "cp932")
+    lines <- iconv(readLines(con=con, encoding="utf-8"), from ="utf-8",  to = "utf-8")
+  }
+  close(con=con)
+  return(lines)
+}
 # ------ main ------
 source(here("programs", "common.R"), encoding="UTF-8")
+source(here("programs", "get_xml.R"), encoding="UTF-8")
 if (exists("target_yyyymm")){
   yyyymm <- target_yyyymm
 } else{
@@ -91,16 +117,36 @@ thisyear_yyyymm <- str_c(yyyy, thisyear_mm)
 # Covering the same month of the previous year or later
 targetYyyymm <- c(lastyear_yyyymm, thisyear_yyyymm)
 # file path
-targetFolderName <- str_c("UTM Logs ", targetYyyymm)
+targetFolderName <- str_c(kUtmLog, targetYyyymm)
+input_parent_path <- home_dir %>% str_remove(str_c(kUtmLog, yyyymm))
 targetYyyymmFolderPath <- str_c(input_parent_path, targetFolderName)
 input_path <- str_c(targetYyyymmFolderPath, "/input/")
 ext_path <- str_c(targetYyyymmFolderPath, "/ext/")
-targetFilePath <- map(input_path, getTargetCsvName) %>% str_c(input_path, .)
+targetFilePath <- map(input_path, getTargetFileName) %>% str_c(input_path, .)
 # Get "###Top 30 Applications by Bandwidth and Sessions###"
 outputTop30Df <- NULL
 for (i in 1:length(targetYyyymm)){
-  temp <- getInputCsv(targetFilePath[i], targetYyyymm[i])
-  tempYM <- temp[1 ,"yyyymm"]
+  if (as.numeric(targetYyyymm[i]) < 202411) {
+    temp <- getInputCsv(targetFilePath[i], targetYyyymm[i])
+    tempYM <- temp[1 ,"yyyymm"]
+  } else {
+    temp <- GetRawDataList(targetFilePath[i])
+    temp_total <- temp$`Traffic Statistics`
+    total <- tibble()
+    total[1, "Application"] <- kTotalTitle
+    total[1, "Bandwidth"] <- temp_total %>% filter(Summary == kTotalTitle) %>% .[ , "Statistics", drop=T]
+    total[1, "Sessions"] <- NA
+    temp_top30 <- temp$`Top 30 Applications by Bandwidth and Sessions`
+    temp_df <- total %>% bind_rows(temp_top30)
+    temp_df$Sessions <- NULL
+    temp_df$Bandwidth <- temp_df$Bandwidth %>% str_remove_all(",")
+    temp_df$temp_bandwidth <- temp_df$Bandwidth %>% map_chr( ~ calcByte(.) %>% as.character(.))
+    temp_df$bandwidth <- temp_df$temp_bandwidth %>% as.numeric()
+    temp_df$temp_bandwidth <- NULL
+    colnames(temp_df) <- c("application", "バンド幅", "bandwidth")
+    temp_df$yyyymm <- targetYyyymm[i]
+    temp <- temp_df
+  }
   outputTop30Df <- rbind(outputTop30Df, temp)
 }
 # ranking
@@ -114,7 +160,7 @@ applicationList$applicationsRank <- ifelse(applicationList$applications == kTota
 outputDf <- left_join(outputTop30Df, applicationList, by=c("application"="applications")) %>% arrange(desc(applicationsRank), application, yyyymm)
 # Create a line chart.
 plot_df <- outputDf
-plot_total <- "Total Bytes Transferred"
+plot_total <- kTotalTitle
 plot_target <- c("IKE", "SSH", "HTTPS", "HTTP", "udp/19305", "udp/443", "udp/8801", "tcp/8052")
 plot_df$bandwidth <- {as.numeric(plot_df$bandwidth) / 1024}
 df_plot <- plot_df %>% filter(application %in% c(plot_total, plot_target))
