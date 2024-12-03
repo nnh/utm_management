@@ -1,6 +1,6 @@
 #' @file generate_md_content.R
 #' @author Mariko Ohtsuka
-#' @date 2024.11.21
+#' @date 2024.12.2
 rm(list=ls())
 # ------ libraries ------
 library(tidyverse)
@@ -20,6 +20,7 @@ ReadAndAssignCsvValue <- function(csv_data) {
 ReadAndAssignCsvValue(kCsvData)
 kLastName <- str_split(kApprover, "(\\s|　)")[[1]][1]
 kFirstName <- str_split(kApprover, "(\\s|　)")[[1]][2]
+kMdOutputPath <- GetBoxDir() %>% file.path(kMdOutputPath)
 # ------ functions ------
 #' Get Fiscal Year
 #' @param date_str A date string in the format "YYYY年M月"
@@ -142,6 +143,17 @@ FindMissingYearMonths <- function(spreadSheet, existing_year_months) {
   df_target <- spreadSheet %>% anti_join(df_existing_year_months, by="target_year_months")
 #  df_target <- df_target %>% filter(!is.na(eventDate))
   return(df_target)
+}
+GetBoxDir <- function() {
+  os <- Sys.info()["sysname"]
+  if (os == "Windows") {
+    volume_str <- Sys.getenv("USERPROFILE") %>% file.path("Box")
+  } else if (os == "Darwin") {
+    volume_str <- "~/Library/CloudStorage/Box-Box"
+  } else {
+    stop("Unsupported OS")
+  }
+  return (volume_str)
 }
 # ------ main ------
 spreadSheet <- ReadGoogleSheet(kGoogleSheetUrl, kGoogleSheetName)

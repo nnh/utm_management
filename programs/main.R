@@ -2,7 +2,7 @@
 #' 
 #' @file main.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.2
+#' @date 2024.12.3
 rm(list=ls())
 # ------ libraries ------
 library(here)
@@ -36,3 +36,5 @@ tablesJoinUserInfo$`User Report without guest`$top10Destinations <- tablesJoinUs
 tablesJoinUserInfo$`Client Reputation without guest`$`Report Filters(Logic: All)` <- tablesJoinUserInfo$`Client Reputation without guest`$`Report Filters(Logic: All)` %>%
   filter(Filter_name != "srcip")
 tablesJoinUserInfo %>% CreateOutputWorkbook()
+# Output bandwidth report
+source(here("programs", "output_bandwidth_report.R"), encoding="UTF-8")
