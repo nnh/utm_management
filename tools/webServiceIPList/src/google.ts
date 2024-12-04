@@ -26,7 +26,7 @@ function fetchGoogleCloudIPRanges_(url: string) {
     const typedResponse = jsonResponse as GoogleCloudIpRangesResponse;
     return typedResponse;
   } catch (error) {
-    console.error('Failed to fetch IP ranges', error);
+    console.log('Failed to fetch IP ranges', error);
     return { prefixes: [], services: [], creationTime: '' };
   }
 }
@@ -40,7 +40,7 @@ function outputGoogleCloudIPRanges_(): void {
   const url: string = 'https://www.gstatic.com/ipranges/cloud.json';
   const range: GoogleCloudIpRangesResponse = fetchGoogleCloudIPRanges_(url);
   if (range.prefixes.length === 0) {
-    console.error('No IP ranges found');
+    console.log('No IP ranges found');
     return;
   }
   const temp: string[][] = range.prefixes
@@ -58,7 +58,7 @@ function fetchGoogleIPRanges_(url: string) {
     const typedResponse = jsonResponse as GoogIpRangesResponse;
     return typedResponse;
   } catch (error) {
-    console.error('Failed to fetch IP ranges', error);
+    console.log('Failed to fetch IP ranges', error);
     return { prefixes: [], syncToken: '', creationTime: '' };
   }
 }
@@ -72,7 +72,7 @@ function outputGoogIPRanges_(): void {
   const url: string = 'https://www.gstatic.com/ipranges/goog.json';
   const range: GoogIpRangesResponse = fetchGoogleIPRanges_(url);
   if (range.prefixes.length === 0) {
-    console.error('No IP ranges found');
+    console.log('No IP ranges found');
     return;
   }
   const temp: string[][] = range.prefixes
