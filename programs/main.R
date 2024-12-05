@@ -22,6 +22,8 @@ tables <- input_path %>% GetInputTables()
 ipAddresses <- tables %>% GetIpAddressesAndDomains()
 deviceList <- GetDeviceList()
 userInfo <- JoinUserInfo(ipAddresses, deviceList)
+whois <- userInfo %>% GetWhoisInfo()
+userInfo <- RestructureUserInfo(userInfo, whois)
 tableInfoList <- SetTableInfo()
 tablesJoinUserInfo <- tables
 for (i in 1:length(tablesJoinUserInfo)) {

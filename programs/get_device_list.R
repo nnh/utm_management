@@ -54,9 +54,9 @@ GetDeviceList <- function() {
   deviceList <- deviceList %>% bind_rows(blackList)
   whiteList <- "whitelistTable.json" %>% file.path(ext_path, .) %>% fromJSON() %>% select("ip"="domain", "hostName"="Description1")
   deviceList <- deviceList %>% bind_rows(whiteList)
-  whois <- file.path(ext_path, "whois.csv") %>% read_csv(show_col_types=F) %>% rename("hostName"="User", "macAddress"="MAC_Address") %>% 
-    select("ip", "hostName", "macAddress")
-  deviceList <- deviceList %>% bind_rows(whois)
+  #whois <- file.path(ext_path, "whois.csv") %>% read_csv(show_col_types=F) %>% rename("hostName"="User", "macAddress"="MAC_Address") %>% 
+  #  select("ip", "hostName", "macAddress")
+  #deviceList <- deviceList %>% bind_rows(whois)
   deviceList <- deviceList %>% add_row(ip="127.0.0.1", hostName="localhost", macAddress=NA)
   deviceList$tempSeq <- 1:nrow(deviceList)
   uniqueDeviceList <- deviceList %>%

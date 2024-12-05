@@ -2,14 +2,15 @@
 #' 
 #' @file common.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.02
+#' @date 2024.12.05
 # ------ libraries ------
 library(googlesheets4)
 library(jsonlite)
 library(tidyverse)
 library(xml2)
+library(ipaddress)
 # ------ constants ------
-kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
+kIpAddr <- "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$"
 kTrafficSummary <- "Traffic Summary"
 kTargetFiles <- c("Admin and System Events Report", 
                   "Bandwidth and Applications Report without guest", 
@@ -82,7 +83,8 @@ if (exists("target_yyyymm")){
 }
 utm_dir_name <- str_c("UTM Logs ", yyyymm)
 volume_str <- GetVolumeStr()
-home_dir <- str_c(volume_str, "/Archives/ISR/SystemAssistant/monthlyOperations/unauthorizedAccessLogs/", utm_dir_name)
+#home_dir <- file.path(volume_str, "/Archives/ISR/SystemAssistant/monthlyOperations/unauthorizedAccessLogs", utm_dir_name)
+home_dir <- file.path("C:\\\\Users\\MarikoOhtsuka\\Downloads", utm_dir_name)
 ext_path <- home_dir %>% file.path("ext")
 addressList <- ext_path %>% file.path("sinet.txt") %>% read.csv()
 if (!exists("addressList")) {

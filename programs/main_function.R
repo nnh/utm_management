@@ -2,7 +2,7 @@
 #' description
 #' @file main_function.R
 #' @author Mariko Ohtsuka
-#' @date YYYY.MM.DD
+#' @date 2024.12.5
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
@@ -131,5 +131,47 @@ GetOutputPath <- function(parent_path) {
     dir.create(output_path)
   }
   return(output_path)
+}
+GetWhoisInfo <- function(userInfo) {
+  whois <- ext_path %>% file.path("whois.json") %>% fromJSON()
+  sinet_ip <- addressList %>% filter(ID=="sinet_ip_list") %>% .$Item %>% trimws()
+  sinet_item_name <- addressList %>% filter(ID=="sinet_item_name") %>% .$Item %>% trimws()
+  sinet <- tibble(User=sinet_item_name, ip=sinet_ip)
+  whois <- sinet %>% bind_rows(whois, .)
+  hgc_ip <- addressList %>% filter(ID=="hgc_ip_list") %>% .$Item %>% trimws()
+  hgc_item_name <- addressList %>% filter(ID=="hgc_item_name") %>% .$Item %>% trimws()
+  hgc <- tibble(User=hgc_item_name, ip=hgc_ip)
+  whois <- hgc %>% bind_rows(whois, .)
+  nmc_ip <- addressList %>% filter(ID=="nmc_ip_list") %>% .$Item %>% trimws()
+  nmc <- tibble(User="名古屋医療センター", ip=nmc_ip)
+  whois <- nmc %>% bind_rows(whois, .)
+  whois$Start_Octet1 <- whois$ip %>% str_split_i(., "\\.", 1)
+  
+  targetIpList <- userInfo %>% filter(is.na(hostName) & str_detect(ip, kIpAddr)) %>% select("ip") %>% unlist()
+  targetOct1 <- targetIpList %>% map_chr( ~ str_split_i(., "\\.", 1)) %>% unique()
+  ipAndUserList <- targetIpList %>% map ( ~ {
+    input_ip <- .
+    oct1 <- input_ip %>% str_split_i(., "\\.", 1)
+    targetWhois <- whois %>% filter(Start_Octet1 == oct1)
+    ip <- ip_address(input_ip)
+    if (nrow(targetWhois) == 0) {
+      return(NULL)
+    }
+    for (i in 1:nrow(targetWhois)) {
+      cidr_range <- ip_network(targetWhois[i, "ip"])
+      is_in_range <- ip %in% seq(cidr_range)
+      if (is_in_range) {
+        return(c(input_ip, targetWhois[i, "User"]))
+      }
+    }
+  }) %>% discard( ~ is.null(.))
+  res <- ipAndUserList %>% map_df( ~ tibble(hostName=.[2], ip=.[1]))
+  return(res)
+}
+RestructureUserInfo <- function(userInfo, whois) {
+  whoisAndUserInfo <- whois %>% inner_join(select(userInfo, -"hostName"), by="ip")
+  temp <- userInfo %>% anti_join(whoisAndUserInfo, by="ip")
+  res <- temp %>% bind_rows(whoisAndUserInfo)
+  return(res)  
 }
 # ------ main ------
