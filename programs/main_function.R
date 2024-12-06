@@ -1,8 +1,8 @@
-#' title
-#' description
+#' Main Functions for Core Processing
+#' This script contains a collection of functions designed for use in the core processing of the project. 
 #' @file main_function.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.5
+#' @date 2024.12.6
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
@@ -24,6 +24,7 @@ JoinReportAndUserInfo <- function(target, itemName, key) {
 }
 JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
   kUsageStr <- "Usage: "
+  KIpAddrPart <- str_remove(kIpAddr, "\\$$")
   tableName <- tableInfo$tableName
   targetItemAndColumn <- tableInfo$targetItemAndColumn
   targetTable <- tables[[tableName]]
@@ -34,10 +35,10 @@ JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
     if (nrow(targetTable[[itemName]]) > 0) {
     
       if (tableName == kAdminAndSystemEvents) {
-        targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
+        targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(KIpAddrPart)
       }
       if (tableName == kUserReport & !is.null(columnName)) {
-        targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(kIpAddr)
+        targetTable[[itemName]][[key]] <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_extract(KIpAddrPart)
         usage_str <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% 
           str_extract(str_c(kUsageStr, "[0-9.]+ [A-Za-z]+")) %>% str_remove(kUsageStr)
         rank_str <- targetTable[[itemName]] %>% .[ , columnName, drop=T] %>% str_split_i(":", 1)
