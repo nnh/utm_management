@@ -1,8 +1,10 @@
-#' title
-#' description
-#' @file xxx.R
+#' Extract Blocked MAC Addresses from DHCP Server Configuration
+#' This script provides functions to parse a DHCP server configuration file and extract blocked MAC addresses,
+#' including details such as interface, action, and description. The extracted data is returned as a structured
+#' data frame.
+#' @file get_blocked_macaddress.R
 #' @author Mariko Ohtsuka
-#' @date YYYY.MM.DD
+#' @date 2024.12.6
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------

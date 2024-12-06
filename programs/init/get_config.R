@@ -10,6 +10,7 @@ library(here)
 # ------ constants ------
 source(here("programs", "common", "common.R"), encoding = "UTF-8")
 source(here("programs", "init", "get_blocked_macaddress.R"), encoding = "UTF-8")
+source(here("programs", "init", "get_dhcp_range.R"), encoding = "UTF-8")
 kSetInterFace <- "set interface "
 # ------ functions ------
 GetBlackList <- function() {
@@ -51,51 +52,6 @@ GetConfigValue <- function(inputStr, removeStr) {
 GetInterFace <- function(inputStr) {
   interFace <- GetConfigValue(inputStr, kSetInterFace)
   return(interFace)
-}
-
-GetDhcpRange <- function() {
-  dhcpConfigStart <- NA
-  dhcpConfigEnd <- NA
-  for (i in seq_len(length(configFile))) {
-    if (str_detect(configFile[i], "config system dhcp server")) {
-      dhcpConfigStart <- i
-    }
-    if (!is.na(dhcpConfigStart) && str_detect(configFile[i], "^end")) {
-      dhcpConfigEnd <- i
-      break
-    }
-  }
-  if (is.na(dhcpConfigStart) || is.na(dhcpConfigEnd)) {
-    stop("Failed to obtain DHCP address range.")
-  }
-  dhcpConfig <- configFile[dhcpConfigStart:dhcpConfigEnd]
-  interface <- NA
-  startIp <- NA
-  endIp <- NA
-  dhcpIpList <- list()
-  for (i in seq_len(length(dhcpConfig))) {
-    if (str_detect(dhcpConfig[i], kSetInterFace)) {
-      interface <- dhcpConfig[i] %>% GetInterFace()
-    }
-    if (str_detect(dhcpConfig[i], "set start-ip ")) {
-      startIp <- dhcpConfig[i] %>% GetConfigValue("set start-ip ")
-    }
-    if (str_detect(dhcpConfig[i], "set end-ip ")) {
-      endIp <- dhcpConfig[i] %>% GetConfigValue("set end-ip ")
-    }
-    if (!is.na(startIp) && !is.na(endIp)) {
-      ip_list <- GetIpRangeList(startIp, endIp)
-      dhcpIpList[[interface]] <- ip_list
-      startIp <- NA
-      endIp <- NA
-    }
-  }
-  df_dhcp <- map2(
-    names(dhcpIpList),
-    dhcpIpList,
-    ~ tibble(interface = .x, ip = .y)
-  ) %>% bind_rows()
-  return(df_dhcp)
 }
 
 # ------ main ------
