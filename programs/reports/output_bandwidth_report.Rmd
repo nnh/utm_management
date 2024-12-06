@@ -4,9 +4,9 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo=F, comment=NA)
+knitr::opts_chunk$set(echo = FALSE, comment = NA)
 ```
 ```{r outputfig, fig.height=6, fig.width=12}
 plot(lineplot)
-kable(select(outputDf, -c(applicationsRank)), format="markdown")
+kable(select(outputDf, -c(applicationsRank)), format = "markdown")
 ```

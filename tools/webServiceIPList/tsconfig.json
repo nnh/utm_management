@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "es2020",
+    "lib": ["es2020"],
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "rootDir": "src", // Set this to 'src' so the compilation starts from that folder
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
+  },
+  "include": [
+    "src/**/*", // Includes all TypeScript files in the 'src' folder
+    "rollup.config.mjs" // Include this if you want Rollup config to be included (if applicable)
+  ]
+}

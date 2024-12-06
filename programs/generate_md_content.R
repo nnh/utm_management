@@ -1,20 +1,25 @@
+#' @title Generate Markdown Content for UTM Report Review
+#' @description This script automates the creation of Markdown files for UTM report reviews.
+#' It reads configuration and data from a CSV file and Google Sheets, processes the data,
+#' identifies missing reports, and generates Markdown files for the missing periods.
+#' The script supports Japanese date formats and integrates with Box for file storage.
 #' @file generate_md_content.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.2
-rm(list=ls())
+#' @date 2024.12.6
+rm(list = ls())
 # ------ libraries ------
 library(tidyverse)
 library(googlesheets4)
 library(here)
 # ------ constants ------
-source(here("programs", "common.R"), encoding="UTF-8")
-kCsvData <- read_csv(str_c(ext_path, "/param.csv"), col_names=c("itemName", "data"))
+source(here("programs", "common", "common.R"), encoding = "UTF-8")
+kCsvData <- read_csv(str_c(ext_path, "/param.csv"), col_names = c("itemName", "data"))
 #' Read and Assign CSV Value
 #' @param csv_data A data frame containing item names and data
 ReadAndAssignCsvValue <- function(csv_data) {
-  for (i in 1:nrow(csv_data)) {
+  for (i in seq_len(nrow(df))) {
     variable_name <- as.character(csv_data[i, 1])
-    assign(variable_name, as.character(csv_data[i, 2]), envir=.GlobalEnv)
+    assign(variable_name, as.character(csv_data[i, 2]), envir = .GlobalEnv)
   }
 }
 ReadAndAssignCsvValue(kCsvData)
@@ -45,10 +50,15 @@ ReadGoogleSheet <- function(url, sheet_name) {
     scopes = "https://www.googleapis.com/auth/spreadsheets",
     cache = gargle::gargle_oauth_cache(),
     use_oob = gargle::gargle_oob_default(),
-    token = NULL)
-  sheet <- url %>% read_sheet(sheet=sheet_name, skip=3, col_names=F, col_types="c") %>% select(c("...1", "...11", "...13"))
+    token = NULL
+  )
+  sheet <- url %>%
+    read_sheet(sheet = sheet_name, skip = 3, col_names = FALSE, col_types = "c") %>%
+    select(c("...1", "...11", "...13"))
   colnames(sheet) <- c("targetYm", "name", "eventDate")
-  sheet$fiscalYear <- sheet$targetYm %>% map( ~ { GetFiscalYear(.) })
+  sheet$fiscalYear <- sheet$targetYm %>% map(~ {
+    GetFiscalYear(.)
+  })
   nowFiscalYear <- GetFiscalYear(str_c(format(Sys.Date(), "%Y"), "年", format(Sys.Date(), "%m"), "月"))
   targetSheet <- sheet %>% filter(fiscalYear == nowFiscalYear)
   return(targetSheet)
@@ -58,10 +68,16 @@ ReadGoogleSheet <- function(url, sheet_name) {
 #' @param file_extension The file extension to filter by
 #' @return A vector of year-month values
 GetFileListInDirectory <- function(folder_path, file_extension) {
-  target_Filename <- str_c(kFileNameHeader, " \\d{6}\\",  file_extension)
-  target_files <- list.files(path=folder_path, pattern=target_Filename,
-                             full.names=F)
-  year_months <- target_files %>% map( ~{gsub(str_c(kFileNameHeader, " (\\d{6})\\", file_extension), "\\1", .)} ) %>% unlist
+  target_Filename <- str_c(kFileNameHeader, " \\d{6}\\", file_extension)
+  target_files <- list.files(
+    path = folder_path, pattern = target_Filename,
+    full.names = FALSE
+  )
+  year_months <- target_files %>%
+    map(~ {
+      gsub(str_c(kFileNameHeader, " (\\d{6})\\", file_extension), "\\1", .)
+    }) %>%
+    unlist()
   return(year_months)
 }
 #' Create MD Files
@@ -72,8 +88,9 @@ GetFileListInDirectory <- function(folder_path, file_extension) {
 #' @param review_day The day of review
 CreateMdFiles <- function(year_month, createName, review_year, review_month, review_day) {
   dayOfWeek <- ifelse(!is.na(review_month) & !is.na(review_day),
-                      GetWeekdayInJapanese(review_year, review_month, review_day),
-                      "")
+    GetWeekdayInJapanese(review_year, review_month, review_day),
+    ""
+  )
   year <- str_sub(year_month, 1, 4)
   month <- str_sub(year_month, 5, str_length(year_month))
   review_month <- ifelse(!is.na(review_month), review_month, " ")
@@ -85,9 +102,11 @@ CreateMdFiles <- function(year_month, createName, review_year, review_month, rev
     str_c("確認:", kLastName, "<br>"),
     str_c("作成:", createName, "<br>"),
     "## 実施日時",
-    str_c(review_year, "年",
-          review_month , "月",
-          review_day, "日", "（", dayOfWeek, "）13:30〜14:00"),
+    str_c(
+      review_year, "年",
+      review_month, "月",
+      review_day, "日", "（", dayOfWeek, "）13:30〜14:00"
+    ),
     "## 参加者",
     str_c(kApprover, "、", kParticipantsList),
     "## 対象期間",
@@ -100,7 +119,7 @@ CreateMdFiles <- function(year_month, createName, review_year, review_month, rev
     "特になし",
     "## 責任者確認",
     str_c(review_year, "年", review_month, "月", review_day, "日　", kLastName),
-    sep="\n"
+    sep = "\n"
   )
   filename <- str_c(kFileNameHeader, " ", year, month, ".md")
   write_lines(textData, str_c(kMdOutputPath, filename))
@@ -114,13 +133,14 @@ GetWeekdayInJapanese <- function(year, month, day) {
   date <- as.Date(paste(year, month, day, sep = "-"))
   weekday_num <- weekdays(date)
   weekday_japanese <- switch(weekday_num,
-                             "Sunday" = "日",
-                             "Monday" = "月",
-                             "Tuesday" = "火",
-                             "Wednesday" = "水",
-                             "Thursday" = "木",
-                             "Friday" = "金",
-                             "Saturday" = "土")
+    "Sunday" = "日",
+    "Monday" = "月",
+    "Tuesday" = "火",
+    "Wednesday" = "水",
+    "Thursday" = "木",
+    "Friday" = "金",
+    "Saturday" = "土"
+  )
   return(weekday_japanese)
 }
 #' Find Missing Year-Months
@@ -131,17 +151,18 @@ FindMissingYearMonths <- function(spreadSheet, existing_year_months) {
   spreadSheet$year <- sub("年.*", "", spreadSheet$targetYm)
   spreadSheet$month <- as.integer(sub(".*?(\\d+)月", "\\1", spreadSheet$targetYm)) %>% sprintf("%02d", .)
   spreadSheet$target_year_months <- str_c(spreadSheet$year, spreadSheet$month)
-  for (i in 1:nrow(spreadSheet)) {
-    temp <- spreadSheet[i, "eventDate"] %>% str_split("/") %>% unlist()
+  for (i in seq_len(nrow(spreadSheet))) {
+    temp <- spreadSheet[i, "eventDate"] %>%
+      str_split("/") %>%
+      unlist()
     spreadSheet[i, "event_month"] <- temp[1]
     spreadSheet[i, "event_day"] <- temp[2]
   }
   if (is.null(existing_year_months)) {
     return(spreadSheet)
   }
-  df_existing_year_months <- data.frame(target_year_months=existing_year_months)
-  df_target <- spreadSheet %>% anti_join(df_existing_year_months, by="target_year_months")
-#  df_target <- df_target %>% filter(!is.na(eventDate))
+  df_existing_year_months <- data.frame(target_year_months = existing_year_months)
+  df_target <- spreadSheet %>% anti_join(df_existing_year_months, by = "target_year_months")
   return(df_target)
 }
 GetBoxDir <- function() {
@@ -153,18 +174,20 @@ GetBoxDir <- function() {
   } else {
     stop("Unsupported OS")
   }
-  return (volume_str)
+  return(volume_str)
 }
 # ------ main ------
 spreadSheet <- ReadGoogleSheet(kGoogleSheetUrl, kGoogleSheetName)
 existing_year_months <- GetFileListInDirectory(kMdOutputPath, ".md")
 create_md_year_months <- FindMissingYearMonths(spreadSheet, existing_year_months)
 if (nrow(create_md_year_months) > 0) {
-  for (i in 1:nrow(create_md_year_months)) {
-    CreateMdFiles(create_md_year_months[i, "target_year_months"],
-                  kCreatorLastName,
-                  create_md_year_months[i, "year"],
-                  create_md_year_months[i, "event_month"],
-                  create_md_year_months[i, "event_day"])
+  for (i in seq_len(nrow(create_md_year_months))) {
+    CreateMdFiles(
+      create_md_year_months[i, "target_year_months"],
+      kCreatorLastName,
+      create_md_year_months[i, "year"],
+      create_md_year_months[i, "event_month"],
+      create_md_year_months[i, "event_day"]
+    )
   }
 }
