@@ -9,6 +9,7 @@ rm(list = ls())
 library(here)
 # ------ constants ------
 source(here("programs", "common", "common.R"), encoding = "UTF-8")
+source(here("programs", "init", "get_blocked_macaddress.R"), encoding = "UTF-8")
 kSetInterFace <- "set interface "
 # ------ functions ------
 GetBlackList <- function() {
@@ -51,63 +52,7 @@ GetInterFace <- function(inputStr) {
   interFace <- GetConfigValue(inputStr, kSetInterFace)
   return(interFace)
 }
-GetBlockedMacAddress <- function() {
-  dhcpSectionStart <- NA
-  dhcpSectionEnd <- NA
-  for (i in seq_len(length(configFile))) {
-    if (configFile[i] == "config system dhcp server") {
-      dhcpSectionStart <- i
-    }
-    if (!is.na(dhcpSectionStart) && configFile[i] == "end") {
-      dhcpSectionEnd <- i
-      break
-    }
-  }
-  dhcpSection <- configFile[dhcpSectionStart:dhcpSectionEnd]
-  blocked_f <- FALSE
-  blockedMacAddress <- list()
-  temp <- list()
-  for (i in seq_len(length(dhcpSection))) {
-    if (str_detect(dhcpSection[i], kSetInterFace)) {
-      interFace <- dhcpSection[i] %>% GetInterFace()
-    }
-    if (str_detect(dhcpSection[i], "config reserved-address")) {
-      blocked_f <- TRUE
-    }
-    if (blocked_f) {
-      if (str_detect(trimws(dhcpSection[i]), "end")) {
-        blocked_f <- FALSE
-        temp$interFace <- interFace
-        blockedMacAddress[[temp$macAddress]] <- temp
-        temp <- list()
-      } else {
-        if (str_detect(dhcpSection[i], "set ")) {
-          if (str_detect(dhcpSection[i], "set mac ")) {
-            temp$macAddress <- dhcpSection[i] %>% GetConfigValue("set mac ")
-          }
-          if (str_detect(dhcpSection[i], "set action block")) {
-            temp$action <- dhcpSection[i] %>% GetConfigValue("set action ")
-          }
-          if (str_detect(dhcpSection[i], "set description ")) {
-            temp$description <- dhcpSection[i] %>% GetConfigValue("set description ")
-          }
-        }
-      }
-    }
-  }
-  df <- data.frame()
-  blockedMacAddressColnames <- blockedMacAddress %>%
-    map(~ names(.)) %>%
-    unique() %>%
-    list_c()
-  for (row in seq_len(length(blockedMacAddress))) {
-    for (col in seq_len(length(blockedMacAddress[[row]]))) {
-      df[row, col] <- blockedMacAddress[[row]][[col]]
-    }
-  }
-  colnames(df) <- blockedMacAddressColnames
-  return(df)
-}
+
 GetDhcpRange <- function() {
   dhcpConfigStart <- NA
   dhcpConfigEnd <- NA
