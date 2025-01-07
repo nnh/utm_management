@@ -34,17 +34,27 @@ GetDhcp <- function() {
     warning = function(e) {
       dhcpFileEncoding <- "utf-16"
       temp <- ReadDhcpTxt(dhcpInputPath, dhcpFileEncoding, dhcpFileName)
-      ip <- temp$V1 %>% trimws()
-      macAddress <- temp$V3
-      hostName <- ifelse(temp$V4 == "", kNoDhcpMessage, temp$V4)
-      temp_tibble <- tibble(ip, macAddress, hostName)
-      df_dhcp <<- temp_tibble %>% filter(str_detect(ip, kIpAddr))
+      df_dhcp <<- temp %>% EditDhcpList()
     }
   )
+  if (nrow(df_dhcp) == 0) {
+    if (nrow(list_dhcp) == 0) {
+      stop("list_dhcp has a length of zero.")
+    }
+    df_dhcp <- list_dhcp %>% EditDhcpList()
+  }
   if (!exists("df_dhcp")) {
     stop("dhcp.txt is missing.")
   }
   return(df_dhcp)
+}
+EditDhcpList <- function(df) {
+  ip <- df$V1 %>% trimws()
+  macAddress <- df$V3
+  hostName <- ifelse(df$V4 == "", kNoDhcpMessage, df$V4)
+  temp_tibble <- tibble(ip, macAddress, hostName)
+  res <- temp_tibble %>% filter(str_detect(ip, kIpAddr))
+  return(res)
 }
 
 GetDeviceList <- function() {
