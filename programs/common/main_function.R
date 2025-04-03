@@ -87,7 +87,9 @@ SetDhcpReleased <- function(userInfo) {
   dhcpReleased <- userInfo %>%
     inner_join(dhcpRange, by = "ip") %>%
     filter(is.na(hostName))
-  dhcpReleased$hostName <- "DHCPリリース済みのため詳細確認不可"
+  dhcpReleased$hostName <- ifelse(is.na(dhcpReleased$macAddress), 
+                                  "DHCPリリース済みのため詳細確認不可",
+                                  "DHCPログのホスト名が空白のため詳細確認不可能")
   dhcpReleased$user <- dhcpReleased$hostName
   dhcpReleased$interface <- NULL
   others <- userInfo %>% anti_join(dhcpReleased, by = "ip")
