@@ -32,12 +32,13 @@ for (i in seq_along(tablesJoinUserInfo)) {
     tablesJoinUserInfo[[i]][[j]] <- tablesJoinUserInfo[[i]][[j]] %>% select(where(~ !all(is.na(.))))
   }
 }
-tablesJoinUserInfo$`User Report without guest`$top10Destinations <-
+top10DestinationsRequiredCols <- c("rank", "usage", "ip", "hostName", "user", "description", 
+                   "macAddress", "Destination", "destinationHost")
+bandwidth_col <- if ("Bandwidth" %in% names(tablesJoinUserInfo$`User Report without guest`$top10Destinations)) "Bandwidth" else "Bytes"
+tablesJoinUserInfo$`User Report without guest`$top10Destinations <- 
   tablesJoinUserInfo$`User Report without guest`$top10Destinations %>%
-  select(all_of(c(
-    "rank", "usage", "ip", "hostName", "user", "description", "macAddress",
-    "Destination", "destinationHost", "Bandwidth", "Application"
-  )))
+  select(all_of(c(top10DestinationsRequiredCols, bandwidth_col, "Application")))
+
 tablesJoinUserInfo$`Client Reputation without guest`$`Report Filters(Logic: All)` <-
   tablesJoinUserInfo$`Client Reputation without guest`$`Report Filters(Logic: All)` %>%
   filter(Filter_name != "srcip")

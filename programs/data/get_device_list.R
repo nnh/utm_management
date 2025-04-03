@@ -50,8 +50,36 @@ GetDhcp <- function() {
 }
 EditDhcpList <- function(df) {
   ip <- df$V1 %>% trimws()
-  macAddress <- df$V3
-  hostName <- ifelse(df$V4 == "", kNoDhcpMessage, df$V4)
+  checkMacAddressCol <- F
+  for (i in 1:nrow(df)) {
+    for (j in 1:ncol(df)) {
+      if (!is.na(df[i, j])) {
+        if (str_detect(df[i, j], "([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}|([0-9A-Fa-f]{4}\\.){2}[0-9A-Fa-f]{4}")) {
+          checkMacAddressCol <- T
+          break
+        }
+      }
+    }
+    if (checkMacAddressCol) {
+      break
+    }
+  }
+  if (j == 3) {
+    macAddress <- df$V3
+    hostName <- ifelse(df$V4 == "", kNoDhcpMessage, df$V4)
+  }
+  if (j == 2) {
+    macAddress <- df$V2
+    temp_v3 <- str_split(df$V3, "\\s+")
+    hostName <- temp_v3 %>% map_chr( ~ {
+      if (.[1] == "") {
+        return(NA)
+      }
+      else {
+        return(.[1])
+      }
+    })
+  }
   temp_tibble <- tibble(ip, macAddress, hostName)
   res <- temp_tibble %>% filter(str_detect(ip, kIpAddr))
   return(res)
@@ -80,12 +108,14 @@ GetDeviceList <- function() {
   uniqueDeviceList$tempSeq <- NULL
   deviceListHostName <- uniqueDeviceList %>% setDeviceHostName()
   vpn <- file.path(ext_path, "vpn.json") %>% fromJSON()
-  if (nrow(vpn) > 0) {
-    vpn$hostName <- "VPN接続"
-    deviceListHostName <- deviceListHostName %>% bind_rows(vpn)
+  if (!is.na(vpn)) {
+    if (nrow(vpn) > 0) {
+      vpn$hostName <- "VPN接続"
+      deviceListHostName <- deviceListHostName %>% bind_rows(vpn)
+    }
   }
   vpnLocalIp <- file.path(ext_path, "vpnLocalIp.json") %>% fromJSON()
-  if (length(vpnLocalIp) > 0) {
+  if (!is.na(vpnLocalIp) && length(vpnLocalIp) > 0) {
     df_vpnLocalIp <- tibble(ip = vpnLocalIp)
     df_vpnLocalIp$hostName <- "vpn user"
     deviceListHostName <- deviceListHostName %>% bind_rows(df_vpnLocalIp)

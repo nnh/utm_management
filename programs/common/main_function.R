@@ -2,7 +2,7 @@
 #' This script contains a collection of functions designed for use in the core processing of the project.
 #' @file main_function.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.6
+#' @date 2025.4.2
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
@@ -63,6 +63,11 @@ JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
           str_split_i(":", 1)
         targetTable[[itemName]]$usage <- usage_str
         targetTable[[itemName]][[columnName]] <- rank_str
+      }
+      if (tableName == kClientReputation) {
+        if ("Device" %in% colnames(targetTable[[itemName]]) & names(key) == "Device2") {
+          names(key) <- "Device"
+        }
       }
       targetTable <- targetTable %>% JoinReportAndUserInfo(itemName, key)
       if (tableName == kUserReport && is.null(columnName)) {

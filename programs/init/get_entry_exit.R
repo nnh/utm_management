@@ -71,6 +71,9 @@ GetTargetVpnList <- function(vpn_files, kTargetStr) {
       }
     }) %>%
     compact()
+  if (length(targetVpnList) == 0) {
+    return(NA)
+  }
   temp <- targetVpnList %>%
     map(~ {
       res <- t(.) %>% data.frame()
@@ -83,6 +86,9 @@ GetTargetVpnList <- function(vpn_files, kTargetStr) {
 
 EditVpnLog <- function(vpn_files, kTargetStr) {
   vpn <- GetTargetVpnList(vpn_files, kTargetStr)
+  if (is.na(vpn)) {
+    return(NA)
+  }
   for (i in 1:(nrow(vpn) - 1)) {
     if (is.na(vpn[i, "X10"]) && !is.na(vpn[i + 1, "X10"])) {
       vpn[i, "X10"] <- vpn[i + 1, "X10"]
@@ -96,6 +102,9 @@ EditVpnLog <- function(vpn_files, kTargetStr) {
 }
 GetVpnLocalIp <- function(vpn_files, kTargetStr) {
   vpn <- GetTargetVpnList(vpn_files, kTargetStr)
+  if (is.na(vpn)) {
+    return(NA)
+  }
   ip <- vpn$X11 %>% str_remove("\\)")
   res <- ip %>% unique()
   return(res)
