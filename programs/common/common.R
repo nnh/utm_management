@@ -2,7 +2,7 @@
 #' common program
 #' @file common.R
 #' @author Mariko Ohtsuka
-#' @date 2025.4.2
+#' @date 2025.4.7
 # ------ libraries ------
 library(googlesheets4)
 library(jsonlite)
@@ -29,7 +29,7 @@ kBlackList <- "blackList"
 kWriteBlackList <- kBlackList %>% str_c("writeSs", .)
 kBlockedMacAddress <- "blockedMacAddressFromConfig"
 kDhcpIpRange <- "dhcpIpRange"
-
+kBandwidthColname <- list(bandwidth="Bandwidth", bytes="Bytes")
 # ------ functions ------
 GetHomeDir <- function() {
   os <- Sys.info()["sysname"]
@@ -75,6 +75,15 @@ NumberToIp <- function(number) {
     number %% 2^8
   )
   paste(parts, collapse = ".")
+}
+GetBandwidthCol <- function(df) {
+  if (kBandwidthColname$bandwidth %in% names(df)) {
+    return(kBandwidthColname$bandwidth)
+  } else if (kBandwidthColname$bytes %in% names(df)) {
+    return(kBandwidthColname$bytes)
+  } else {
+    stop("Neither 'Bandwidth' nor 'Bytes' column found.")
+  }
 }
 # ------ main ------
 # target_yyyymm <- "201906"

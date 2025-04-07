@@ -165,7 +165,13 @@ for (i in seq_along(targetYyyymm)) {
       .[, "Statistics", drop = TRUE]
     total[1, "Sessions"] <- NA
     temp_top30 <- temp$`Top 30 Applications by Bandwidth and Sessions`
-    temp_df <- total %>% bind_rows(temp_top30)
+    bandwidth_col <- GetBandwidthCol(temp_top30)
+    if (bandwidth_col == kBandwidthColname$bytes) {
+      temp_top30_mod <- temp_top30 %>% rename(!!kBandwidthColname$bandwidth := !!sym(kBandwidthColname$bytes))
+    } else {
+      temp_top30_mod <- temp_top30
+    }
+    temp_df <- total %>% bind_rows(temp_top30_mod)
     temp_df$Sessions <- NULL
     temp_df$Bandwidth <- temp_df$Bandwidth %>% str_remove_all(",")
     temp_df$temp_bandwidth <- temp_df$Bandwidth %>% map_chr(~ calcByte(.) %>% as.character(.))
