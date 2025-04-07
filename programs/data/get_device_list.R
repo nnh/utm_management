@@ -150,6 +150,18 @@ setDeviceHostName <- function(deviceList) {
   sinetTable$key <- sinetTable$hostName %>% tolower()
   sinetTable$hostName <- NULL
   privateHostNameAndUser <- privateHostNames %>% left_join(sinetTable, by = "key")
+  temp_privateHostNameAndUser <- privateHostNameAndUser %>% filter(is.na(user))
+  temp_nonNa_privateHostNameAndUser <- privateHostNameAndUser %>% filter(!is.na(user))
+  for (i in 1:nrow(temp_privateHostNameAndUser)) {
+    for (j in 1:nrow(sinetTable)) {
+      if (str_starts(sinetTable[j, "key"], temp_privateHostNameAndUser[i, "key"][[1]])) {
+        temp_privateHostNameAndUser[i, "user"] <- sinetTable[j, "user"]
+        temp_privateHostNameAndUser[i, "description"] <- sinetTable[j, "description"]
+        break
+      }
+    }
+  }
+  privateHostNameAndUser <- bind_rows(temp_privateHostNameAndUser, temp_nonNa_privateHostNameAndUser)
   privateHostNameAndUser$key <- NULL
   privateAddresseInfo <- privateHostNameAndUser %>%
     inner_join(privateAddresses, by = "hostName", relationship = "many-to-many")
