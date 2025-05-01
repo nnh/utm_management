@@ -108,18 +108,18 @@ GetDeviceList <- function() {
   uniqueDeviceList$tempSeq <- NULL
   deviceListHostName <- uniqueDeviceList %>% setDeviceHostName()
   vpn <- file.path(ext_path, "vpn.json") %>% fromJSON()
-  if (!is.na(vpn)) {
+  if (!(is.atomic(vpn) && length(vpn) == 1 && is.na(vpn))) {
     if (nrow(vpn) > 0) {
       vpn$hostName <- "VPN接続"
       deviceListHostName <- deviceListHostName %>% bind_rows(vpn)
     }
   }
   vpnLocalIp <- file.path(ext_path, "vpnLocalIp.json") %>% fromJSON()
-  if (!is.na(vpnLocalIp) && length(vpnLocalIp) > 0) {
+  if (length(vpnLocalIp) > 0 && !all(is.na(vpnLocalIp))) {
     df_vpnLocalIp <- tibble(ip = vpnLocalIp)
     df_vpnLocalIp$hostName <- "vpn user"
     deviceListHostName <- deviceListHostName %>% bind_rows(df_vpnLocalIp)
-  }
+    }
   res <- deviceListHostName %>% arrange(ip)
   return(res)
 }
