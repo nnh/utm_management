@@ -50,8 +50,36 @@ GetDhcp <- function() {
 }
 EditDhcpList <- function(df) {
   ip <- df$V1 %>% trimws()
-  macAddress <- df$V3
-  hostName <- ifelse(df$V4 == "", kNoDhcpMessage, df$V4)
+  checkMacAddressCol <- F
+  for (i in 1:nrow(df)) {
+    for (j in 1:ncol(df)) {
+      if (!is.na(df[i, j])) {
+        if (str_detect(df[i, j], "([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}|([0-9A-Fa-f]{4}\\.){2}[0-9A-Fa-f]{4}")) {
+          checkMacAddressCol <- T
+          break
+        }
+      }
+    }
+    if (checkMacAddressCol) {
+      break
+    }
+  }
+  if (j == 3) {
+    macAddress <- df$V3
+    hostName <- ifelse(df$V4 == "", kNoDhcpMessage, df$V4)
+  }
+  if (j == 2) {
+    macAddress <- df$V2
+    temp_v3 <- str_split(df$V3, "\\s+")
+    hostName <- temp_v3 %>% map_chr( ~ {
+      if (.[1] == "") {
+        return(NA)
+      }
+      else {
+        return(.[1])
+      }
+    })
+  }
   temp_tibble <- tibble(ip, macAddress, hostName)
   res <- temp_tibble %>% filter(str_detect(ip, kIpAddr))
   return(res)
@@ -80,16 +108,18 @@ GetDeviceList <- function() {
   uniqueDeviceList$tempSeq <- NULL
   deviceListHostName <- uniqueDeviceList %>% setDeviceHostName()
   vpn <- file.path(ext_path, "vpn.json") %>% fromJSON()
-  if (nrow(vpn) > 0) {
-    vpn$hostName <- "VPN接続"
-    deviceListHostName <- deviceListHostName %>% bind_rows(vpn)
+  if (!(is.atomic(vpn) && length(vpn) == 1 && is.na(vpn))) {
+    if (nrow(vpn) > 0) {
+      vpn$hostName <- "VPN接続"
+      deviceListHostName <- deviceListHostName %>% bind_rows(vpn)
+    }
   }
   vpnLocalIp <- file.path(ext_path, "vpnLocalIp.json") %>% fromJSON()
-  if (length(vpnLocalIp) > 0) {
+  if (length(vpnLocalIp) > 0 && !all(is.na(vpnLocalIp))) {
     df_vpnLocalIp <- tibble(ip = vpnLocalIp)
     df_vpnLocalIp$hostName <- "vpn user"
     deviceListHostName <- deviceListHostName %>% bind_rows(df_vpnLocalIp)
-  }
+    }
   res <- deviceListHostName %>% arrange(ip)
   return(res)
 }
@@ -120,6 +150,18 @@ setDeviceHostName <- function(deviceList) {
   sinetTable$key <- sinetTable$hostName %>% tolower()
   sinetTable$hostName <- NULL
   privateHostNameAndUser <- privateHostNames %>% left_join(sinetTable, by = "key")
+  temp_privateHostNameAndUser <- privateHostNameAndUser %>% filter(is.na(user))
+  temp_nonNa_privateHostNameAndUser <- privateHostNameAndUser %>% filter(!is.na(user))
+  for (i in 1:nrow(temp_privateHostNameAndUser)) {
+    for (j in 1:nrow(sinetTable)) {
+      if (str_starts(sinetTable[j, "key"], temp_privateHostNameAndUser[i, "key"][[1]])) {
+        temp_privateHostNameAndUser[i, "user"] <- sinetTable[j, "user"]
+        temp_privateHostNameAndUser[i, "description"] <- sinetTable[j, "description"]
+        break
+      }
+    }
+  }
+  privateHostNameAndUser <- bind_rows(temp_privateHostNameAndUser, temp_nonNa_privateHostNameAndUser)
   privateHostNameAndUser$key <- NULL
   privateAddresseInfo <- privateHostNameAndUser %>%
     inner_join(privateAddresses, by = "hostName", relationship = "many-to-many")

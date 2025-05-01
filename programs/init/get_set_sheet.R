@@ -42,4 +42,6 @@ dummy <- c("fortiGateUserInfo", "sinetTable", "staticIpTable", "whitelistTable",
 blackList <- here(ext_path, str_c(kWriteBlackList, ".json")) %>% fromJSON()
 write_sheet(blackList, ss = excludedUrl, sheet = "blacklist")
 blockedMacAddress <- here(ext_path, str_c(kBlockedMacAddress, ".json")) %>% fromJSON()
-write_sheet(blockedMacAddress, ss = excludedUrl, sheet = "blockedDevices")
+if (length(blockedMacAddress) > 0) {
+  write_sheet(blockedMacAddress, ss = excludedUrl, sheet = "blockedDevices")
+}

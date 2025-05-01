@@ -4,7 +4,7 @@
 #' and compile them into structured lists for further processing.
 #' @file get_xml.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.6
+#' @date 2025.4.1
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
@@ -95,7 +95,8 @@ GetTagAndNames <- function(xml_data, tagName) {
 GetBaseName <- function(full_file_path) {
   res <- full_file_path %>%
     basename() %>%
-    str_remove("-[0-9\\-]+_[0-9]{4}\\.xml")
+    str_remove("-[0-9\\-]+_[0-9]{4}\\.xml") %>% 
+    str_remove("-[0-9\\-]+\\+[0-9]{4}_[0-9]+.xml")
   return(res)
 }
 GetTargetFilePath <- function(input_path) {

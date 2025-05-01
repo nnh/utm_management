@@ -2,7 +2,7 @@
 #' This script contains a collection of functions designed for use in the core processing of the project.
 #' @file main_function.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.6
+#' @date 2025.4.2
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
@@ -64,6 +64,11 @@ JoinReportAndUserInfoByTable <- function(tables, tableInfo) {
         targetTable[[itemName]]$usage <- usage_str
         targetTable[[itemName]][[columnName]] <- rank_str
       }
+      if (tableName == kClientReputation) {
+        if ("Device" %in% colnames(targetTable[[itemName]]) & names(key) == "Device2") {
+          names(key) <- "Device"
+        }
+      }
       targetTable <- targetTable %>% JoinReportAndUserInfo(itemName, key)
       if (tableName == kUserReport && is.null(columnName)) {
         targetTable[[itemName]]$user <- NULL
@@ -82,7 +87,9 @@ SetDhcpReleased <- function(userInfo) {
   dhcpReleased <- userInfo %>%
     inner_join(dhcpRange, by = "ip") %>%
     filter(is.na(hostName))
-  dhcpReleased$hostName <- "DHCPリリース済みのため詳細確認不可"
+  dhcpReleased$hostName <- ifelse(is.na(dhcpReleased$macAddress), 
+                                  "DHCPリリース済みのため詳細確認不可",
+                                  kNoDhcpMessage)
   dhcpReleased$user <- dhcpReleased$hostName
   dhcpReleased$interface <- NULL
   others <- userInfo %>% anti_join(dhcpReleased, by = "ip")

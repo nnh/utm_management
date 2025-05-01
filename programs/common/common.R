@@ -2,7 +2,7 @@
 #' common program
 #' @file common.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.06
+#' @date 2025.4.7
 # ------ libraries ------
 library(googlesheets4)
 library(jsonlite)
@@ -23,12 +23,13 @@ kTargetFiles <- c(
 )
 kAdminAndSystemEvents <- kTargetFiles[1]
 kUserReport <- kTargetFiles[7]
+kClientReputation <- kTargetFiles[3]
 kNoDhcpMessage <- "DHCPログのホスト名が空白のため詳細確認不可能"
 kBlackList <- "blackList"
 kWriteBlackList <- kBlackList %>% str_c("writeSs", .)
 kBlockedMacAddress <- "blockedMacAddressFromConfig"
 kDhcpIpRange <- "dhcpIpRange"
-
+kBandwidthColname <- list(bandwidth="Bandwidth", bytes="Bytes")
 # ------ functions ------
 GetHomeDir <- function() {
   os <- Sys.info()["sysname"]
@@ -75,6 +76,15 @@ NumberToIp <- function(number) {
   )
   paste(parts, collapse = ".")
 }
+GetBandwidthCol <- function(df) {
+  if (kBandwidthColname$bandwidth %in% names(df)) {
+    return(kBandwidthColname$bandwidth)
+  } else if (kBandwidthColname$bytes %in% names(df)) {
+    return(kBandwidthColname$bytes)
+  } else {
+    stop("Neither 'Bandwidth' nor 'Bytes' column found.")
+  }
+}
 # ------ main ------
 # target_yyyymm <- "201906"
 if (exists("target_yyyymm")) {
@@ -98,7 +108,7 @@ if (!exists("addressList")) {
 }
 configFileName <- ext_path %>%
   list.files() %>%
-  str_extract("[A-Z]{6}[0-9]{2}_[0-9]{8}_[0-9]{4}\\.conf") %>%
+  str_extract("[A-Z]{6}[0-9]{2}_[0-9\\-_]+\\.conf") %>%
   na.omit()
 if (length(configFileName) == 0) {
   stop("config file is missing.")
