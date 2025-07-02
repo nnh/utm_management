@@ -2,7 +2,7 @@
 #'
 #' @file get_device_list.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.6
+#' @date 2025.7.2
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
@@ -154,10 +154,12 @@ setDeviceHostName <- function(deviceList) {
   temp_nonNa_privateHostNameAndUser <- privateHostNameAndUser %>% filter(!is.na(user))
   for (i in 1:nrow(temp_privateHostNameAndUser)) {
     for (j in 1:nrow(sinetTable)) {
-      if (str_starts(sinetTable[j, "key"], temp_privateHostNameAndUser[i, "key"][[1]])) {
-        temp_privateHostNameAndUser[i, "user"] <- sinetTable[j, "user"]
-        temp_privateHostNameAndUser[i, "description"] <- sinetTable[j, "description"]
-        break
+      if (!is.na(sinetTable[j, "key"]) & !is.na(temp_privateHostNameAndUser[i, "key"])) {
+        if (str_starts(sinetTable[j, "key"], temp_privateHostNameAndUser[i, "key"][[1]])) {
+          temp_privateHostNameAndUser[i, "user"] <- sinetTable[j, "user"]
+          temp_privateHostNameAndUser[i, "description"] <- sinetTable[j, "description"]
+          break
+        }
       }
     }
   }

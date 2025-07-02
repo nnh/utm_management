@@ -2,7 +2,7 @@
 #'
 #' @file main.R
 #' @author Mariko Ohtsuka
-#' @date 2025.4.7
+#' @date 2025.7.2
 rm(list = ls())
 # ------ libraries ------
 library(here)
@@ -44,6 +44,16 @@ tablesJoinUserInfo$`User Report without guest`$top10Destinations <-
 tablesJoinUserInfo$`Client Reputation without guest`$`Report Filters(Logic: All)` <-
   tablesJoinUserInfo$`Client Reputation without guest`$`Report Filters(Logic: All)` %>%
   filter(Filter_name != "srcip")
+# 重複を削除
+tablesJoinUserInfo$`List of terminals connected to DataCenter`$`Top 100 Users by Bandwidth and Sessions` <- 
+  tablesJoinUserInfo$`List of terminals connected to DataCenter`$`Top 100 Users by Bandwidth and Sessions` %>% 
+  distinct()
+tablesJoinUserInfo$`List of terminals connected to nmccrc`$`Top 100 Users by Bandwidth and Sessions` <- 
+  tablesJoinUserInfo$`List of terminals connected to nmccrc`$`Top 100 Users by Bandwidth and Sessions` %>% 
+  distinct()
+tablesJoinUserInfo$`List of terminals connected vpn`$`Top 100 Users by Bandwidth and Sessions` <-
+  tablesJoinUserInfo$`List of terminals connected vpn`$`Top 100 Users by Bandwidth and Sessions` %>%
+  distinct()
 tablesJoinUserInfo %>% CreateOutputWorkbook()
 # Output bandwidth report
 source(here("programs", "reports", "output_bandwidth_report.R"), encoding = "UTF-8")
