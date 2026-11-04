@@ -2,7 +2,7 @@
 #'
 #' @file get_device_list.R
 #' @author Mariko Ohtsuka
-#' @date 2025.7.2
+#' @date 2026.11.4
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
@@ -71,11 +71,10 @@ EditDhcpList <- function(df) {
   if (j == 2) {
     macAddress <- df$V2
     temp_v3 <- str_split(df$V3, "\\s+")
-    hostName <- temp_v3 %>% map_chr( ~ {
+    hostName <- temp_v3 %>% map_chr(~ {
       if (.[1] == "") {
         return(NA)
-      }
-      else {
+      } else {
         return(.[1])
       }
     })
@@ -86,7 +85,7 @@ EditDhcpList <- function(df) {
 }
 
 GetDeviceList <- function() {
-  staticIp <- GetStaticIpFromJson() %>% filter(hostName != "DHCP Start" & hostName != "DHCP End")
+  staticIp <- GetStaticIpFromJson() %>% filter(!hostName %in% c("DHCP Start", "DHCP End"))
   deviceList <- staticIp
   dhcp <- GetDhcp()
   deviceList <- deviceList %>% bind_rows(dhcp)
@@ -119,19 +118,38 @@ GetDeviceList <- function() {
     df_vpnLocalIp <- tibble(ip = vpnLocalIp)
     df_vpnLocalIp$hostName <- "vpn user"
     deviceListHostName <- deviceListHostName %>% bind_rows(df_vpnLocalIp)
-    }
+  }
   res <- deviceListHostName %>% arrange(ip)
   return(res)
 }
 GetStaticIpFromJson <- function() {
-  staticIp <- "staticIpTable.json" %>%
+  items <- "staticIpTable.json" %>%
+    file.path(ext_path, .) %>%
+    read_json() %>%
+    .$body %>%
+    .[[1]]
+  staticIp <- items %>%
+    map(~ tibble(
+      ip = .x$Title %||% NA_character_,
+      hostName = .x$DeviceName %||% NA_character_,
+      description = .x$Dept$Value %||% NA_character_,
+      assignedUser = .x$AssignedUser$DisplayName %||% NA_character_,
+      note = .x$Notes %||% NA_character_
+    )) %>%
+    bind_rows() %>%
+    filter(!is.na(description))
+  staticIpSheet <- "staticIpSheet.json" %>%
     file.path(ext_path, .) %>%
     fromJSON() %>%
     filter(!is.na(ホスト名)) %>%
-    select(c("ip" = "IPアドレス", "hostName" = "ホスト名", "description" = "設置場所", 管理者, 用途))
-  staticIp$user <- ifelse(!is.na(staticIp$管理者), staticIp$管理者, staticIp$用途)
-  staticIp$管理者 <- NULL
-  staticIp$用途 <- NULL
+    select(c("ip" = "IPアドレス", "hostName" = "ホスト名", "description" = "設置場所", "assignedUser" = "管理者", "note" = "用途"))
+  # IPアドレスが重複する場合はstaticIpTable.jsonの情報を残す
+  staticIp <- staticIp %>%
+    bind_rows(staticIpSheet) %>%
+    distinct(ip, .keep_all = TRUE)
+  staticIp$user <- ifelse(!is.na(staticIp$assignedUser), staticIp$assignedUser, staticIp$note)
+  staticIp$assignedUser <- NULL
+  staticIp$note <- NULL
   return(staticIp)
 }
 setDeviceHostName <- function(deviceList) {
@@ -170,7 +188,7 @@ setDeviceHostName <- function(deviceList) {
   res <- privateAddresseInfo %>%
     bind_rows(publicAddresses) %>%
     arrange("ip")
-  res$user <- ifelse(res$hostName == kNoDhcpMessage, kNoDhcpMessage, res$user)
+  res$user <- ifelse(res$hostName %in% kNoDhcpMessage, kNoDhcpMessage, res$user)
   return(res)
 }
 # ------ main ------

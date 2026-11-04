@@ -5,7 +5,7 @@
 #' It uses the 'gs4_auth' function for Google Sheets authentication and processes data in JSON format.
 #' @file get_set_sheet.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.6
+#' @date 2026.11.4
 rm(list = ls())
 # ------ libraries ------
 library(here)
@@ -29,16 +29,17 @@ sinetTable <- addressList %>%
   filter(ID == "sinet") %>%
   .$Item %>%
   read_sheet()
-staticIpTable <- addressList %>%
+staticIpSheet <- addressList %>%
   filter(ID == "static_ip") %>%
   .$Item %>%
-  read_sheet()
+  read_sheet() %>%
+  filter(is.na(削除日) | as.Date(削除日) > Sys.Date())
 excludedUrl <- addressList %>%
   filter(ID == "excluded") %>%
   .$Item
 whitelistTable <- excludedUrl %>% read_sheet(sheet = "whitelist")
 whois <- excludedUrl %>% read_sheet(sheet = "whois")
-dummy <- c("fortiGateUserInfo", "sinetTable", "staticIpTable", "whitelistTable", "whois") %>% map(~ TableWriteJson(.))
+dummy <- c("fortiGateUserInfo", "sinetTable", "staticIpSheet", "whitelistTable", "whois") %>% map(~ TableWriteJson(.))
 blackList <- here(ext_path, str_c(kWriteBlackList, ".json")) %>% fromJSON()
 write_sheet(blackList, ss = excludedUrl, sheet = "blacklist")
 blockedMacAddress <- here(ext_path, str_c(kBlockedMacAddress, ".json")) %>% fromJSON()
