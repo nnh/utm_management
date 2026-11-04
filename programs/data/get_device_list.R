@@ -134,10 +134,19 @@ GetStaticIpFromJson <- function() {
       hostName = .x$DeviceName %||% NA_character_,
       description = .x$Dept$Value %||% NA_character_,
       assignedUser = .x$AssignedUser$DisplayName %||% NA_character_,
-      note = .x$Note %||% NA_character_
+      note = .x$Notes %||% NA_character_
     )) %>%
     bind_rows() %>%
     filter(!is.na(description))
+  staticIpSheet <- "staticIpSheet.json" %>%
+    file.path(ext_path, .) %>%
+    fromJSON() %>%
+    filter(!is.na(ホスト名)) %>%
+    select(c("ip" = "IPアドレス", "hostName" = "ホスト名", "description" = "設置場所", "assignedUser" = "管理者", "note" = "用途"))
+  # IPアドレスが重複する場合はstaticIpTable.jsonの情報を残す
+  staticIp <- staticIp %>%
+    bind_rows(staticIpSheet) %>%
+    distinct(ip, .keep_all = TRUE)
   staticIp$user <- ifelse(!is.na(staticIp$assignedUser), staticIp$assignedUser, staticIp$note)
   staticIp$assignedUser <- NULL
   staticIp$note <- NULL

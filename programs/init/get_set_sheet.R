@@ -29,12 +29,17 @@ sinetTable <- addressList %>%
   filter(ID == "sinet") %>%
   .$Item %>%
   read_sheet()
+staticIpSheet <- addressList %>%
+  filter(ID == "static_ip") %>%
+  .$Item %>%
+  read_sheet() %>%
+  filter(is.na(削除日) | as.Date(削除日) > Sys.Date())
 excludedUrl <- addressList %>%
   filter(ID == "excluded") %>%
   .$Item
 whitelistTable <- excludedUrl %>% read_sheet(sheet = "whitelist")
 whois <- excludedUrl %>% read_sheet(sheet = "whois")
-dummy <- c("fortiGateUserInfo", "sinetTable", "whitelistTable", "whois") %>% map(~ TableWriteJson(.))
+dummy <- c("fortiGateUserInfo", "sinetTable", "staticIpSheet", "whitelistTable", "whois") %>% map(~ TableWriteJson(.))
 blackList <- here(ext_path, str_c(kWriteBlackList, ".json")) %>% fromJSON()
 write_sheet(blackList, ss = excludedUrl, sheet = "blacklist")
 blockedMacAddress <- here(ext_path, str_c(kBlockedMacAddress, ".json")) %>% fromJSON()
