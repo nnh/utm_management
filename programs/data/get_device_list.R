@@ -123,11 +123,13 @@ GetDeviceList <- function() {
   return(res)
 }
 GetStaticIpFromJson <- function() {
-  items <- "staticIpTable.json" %>%
-    file.path(ext_path, .) %>%
+  items <- addressList %>%
+    filter(ID == "static_ip_table_path") %>%
+    .$Item %>%
+    trimws() %>%
+    file.path(GetBoxDir(), .) %>%
     read_json() %>%
-    .$body %>%
-    .[[1]]
+    .$value
   staticIp <- items %>%
     map(~ tibble(
       ip = .x$Title %||% NA_character_,
