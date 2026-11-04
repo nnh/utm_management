@@ -2,7 +2,7 @@
 #' common program
 #' @file common.R
 #' @author Mariko Ohtsuka
-#' @date 2025.4.7
+#' @date 2026.11.4
 # ------ libraries ------
 library(googlesheets4)
 library(jsonlite)
@@ -29,7 +29,7 @@ kBlackList <- "blackList"
 kWriteBlackList <- kBlackList %>% str_c("writeSs", .)
 kBlockedMacAddress <- "blockedMacAddressFromConfig"
 kDhcpIpRange <- "dhcpIpRange"
-kBandwidthColname <- list(bandwidth="Bandwidth", bytes="Bytes")
+kBandwidthColname <- list(bandwidth = "Bandwidth", bytes = "Bytes")
 # ------ functions ------
 GetHomeDir <- function() {
   os <- Sys.info()["sysname"]
@@ -48,6 +48,17 @@ GetVolumeStr <- function() {
     volume_str <- "//aronas"
   } else if (os == "Darwin") {
     volume_str <- "/Volumes"
+  } else {
+    stop("Unsupported OS")
+  }
+  return(volume_str)
+}
+GetBoxDir <- function() {
+  os <- Sys.info()["sysname"]
+  if (os == "Windows") {
+    volume_str <- Sys.getenv("USERPROFILE") %>% file.path("Box")
+  } else if (os == "Darwin") {
+    volume_str <- "~/Library/CloudStorage/Box-Box"
   } else {
     stop("Unsupported OS")
   }

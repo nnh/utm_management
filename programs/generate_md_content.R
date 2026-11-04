@@ -5,7 +5,7 @@
 #' The script supports Japanese date formats and integrates with Box for file storage.
 #' @file generate_md_content.R
 #' @author Mariko Ohtsuka
-#' @date 2024.12.6
+#' @date 2026.11.4
 rm(list = ls())
 # ------ libraries ------
 library(tidyverse)
@@ -164,17 +164,6 @@ FindMissingYearMonths <- function(spreadSheet, existing_year_months) {
   df_existing_year_months <- data.frame(target_year_months = existing_year_months)
   df_target <- spreadSheet %>% anti_join(df_existing_year_months, by = "target_year_months")
   return(df_target)
-}
-GetBoxDir <- function() {
-  os <- Sys.info()["sysname"]
-  if (os == "Windows") {
-    volume_str <- Sys.getenv("USERPROFILE") %>% file.path("Box")
-  } else if (os == "Darwin") {
-    volume_str <- "~/Library/CloudStorage/Box-Box"
-  } else {
-    stop("Unsupported OS")
-  }
-  return(volume_str)
 }
 # ------ main ------
 spreadSheet <- ReadGoogleSheet(kGoogleSheetUrl, kGoogleSheetName)
