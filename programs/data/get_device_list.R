@@ -188,7 +188,7 @@ setDeviceHostName <- function(deviceList) {
   res <- privateAddresseInfo %>%
     bind_rows(publicAddresses) %>%
     arrange("ip")
-  res$user <- ifelse(res$hostName == kNoDhcpMessage, kNoDhcpMessage, res$user)
+  res$user <- ifelse(res$hostName %in% kNoDhcpMessage, kNoDhcpMessage, res$user)
   return(res)
 }
 # ------ main ------
