@@ -2,7 +2,7 @@
 #' This script contains a collection of functions designed for use in the core processing of the project.
 #' @file main_function.R
 #' @author Mariko Ohtsuka
-#' @date 2025.4.2
+#' @date 2026.11.4
 # ------ libraries ------
 # ------ constants ------
 # ------ functions ------
@@ -87,9 +87,10 @@ SetDhcpReleased <- function(userInfo) {
   dhcpReleased <- userInfo %>%
     inner_join(dhcpRange, by = "ip") %>%
     filter(is.na(hostName))
-  dhcpReleased$hostName <- ifelse(is.na(dhcpReleased$macAddress), 
-                                  "DHCPリリース済みのため詳細確認不可",
-                                  kNoDhcpMessage)
+  dhcpReleased$hostName <- ifelse(is.na(dhcpReleased$macAddress),
+    "DHCPリリース済みのため詳細確認不可",
+    kNoDhcpMessage
+  )
   dhcpReleased$user <- dhcpReleased$hostName
   dhcpReleased$interface <- NULL
   others <- userInfo %>% anti_join(dhcpReleased, by = "ip")
@@ -165,6 +166,13 @@ GetOutputPath <- function(parent_path) {
   }
   return(output_path)
 }
+CheckItemLength <- function(ip, itemName, ipId, itemNameId) {
+  if (length(ip) != length(itemName) && length(ip) != 1 && length(itemName) != 1) {
+    stop(str_c(
+      "sinet.txt: ", ipId, " (", length(ip), ") and ", itemNameId, " (", length(itemName), ") have different lengths."
+    ))
+  }
+}
 GetWhoisInfo <- function(userInfo) {
   whois <- ext_path %>%
     file.path("whois.json") %>%
@@ -177,6 +185,7 @@ GetWhoisInfo <- function(userInfo) {
     filter(ID == "sinet_item_name") %>%
     .$Item %>%
     trimws()
+  CheckItemLength(sinet_ip, sinet_item_name, "sinet_ip_list", "sinet_item_name")
   sinet <- tibble(User = sinet_item_name, ip = sinet_ip)
   whois <- sinet %>% bind_rows(whois, .)
   hgc_ip <- addressList %>%
@@ -187,6 +196,7 @@ GetWhoisInfo <- function(userInfo) {
     filter(ID == "hgc_item_name") %>%
     .$Item %>%
     trimws()
+  CheckItemLength(hgc_ip, hgc_item_name, "hgc_ip_list", "hgc_item_name")
   hgc <- tibble(User = hgc_item_name, ip = hgc_ip)
   whois <- hgc %>% bind_rows(whois, .)
   nmc_ip <- addressList %>%
@@ -215,7 +225,7 @@ GetWhoisInfo <- function(userInfo) {
       }
       for (i in seq_len(nrow(targetWhois))) {
         cidr_range <- ip_network(targetWhois[i, "ip"])
-        is_in_range <- ip %in% seq(cidr_range)
+        is_in_range <- is_within(ip, cidr_range)
         if (is_in_range) {
           return(c(input_ip, targetWhois[i, "User"]))
         }
